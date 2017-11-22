@@ -8,7 +8,8 @@
         android:name="com.google.android.gms.maps.SupportMapFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        tools:context="com.fsy.google.MapsActivity">
+        tools:context="com.fsy.google.MapsActivity"
+        >
     </fragment>
     <Button
         android:id="@+id/bt_pop"
