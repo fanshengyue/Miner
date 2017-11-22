@@ -56,7 +56,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     CheckBox cbTraffic;
     @BindView(R.id.bt_pop)
     Button btPop;
-
     /**
      * Flag indicating whether a requested permission has been denied after returning in
      * {@link #onRequestPermissionsResult(int, String[], int[])}.
