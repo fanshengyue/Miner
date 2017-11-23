@@ -6,6 +6,7 @@ import android.app.ActionBar;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -29,11 +30,12 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
+import android.view.Window;
 import android.widget.AdapterView;
-import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.ListView;
 import android.widget.PopupWindow;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -42,7 +44,6 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.miner.adapter.TimeListAdapter;
 import com.miner.bean.AccelerationBean;
@@ -56,9 +57,7 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.RandomAccessFile;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Timer;
@@ -78,18 +77,33 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
     private static final int WRITE_EXTERNAL_STORAGE_CODE = 2;
     private static final int READ_EXTERNAL_STORAGE_CODE = 3;
-    @BindView(R.id.bt_getdata)
-    Button btGetdata;
+
     @BindView(R.id.cb_traffic)
     CheckBox cbTraffic;
-    @BindView(R.id.bt_pop)
-    Button btPop;
-    @BindView(R.id.bt_stop)
-    Button btStop;
-    @BindView(R.id.bt_clear_map)
-    Button btClearMap;
-    @BindView(R.id.bt_video_record)
-    Button btVideoRecord;
+    @BindView(R.id.tv_pop)
+    TextView tvPop;
+    @BindView(R.id.tv_gps_lat)
+    TextView tvGpsLat;
+    @BindView(R.id.tv_gps_lng)
+    TextView tvGpsLng;
+    @BindView(R.id.tv_gps_alt)
+    TextView tvGpsAlt;
+    @BindView(R.id.tv_gps_speed)
+    TextView tvGpsSpeed;
+    @BindView(R.id.tv_gps_bearing)
+    TextView tvGpsBearing;
+    @BindView(R.id.tv_acc_x)
+    TextView tvAccX;
+    @BindView(R.id.tv_acc_y)
+    TextView tvAccY;
+    @BindView(R.id.tv_acc_z)
+    TextView tvAccZ;
+    @BindView(R.id.tv_light_x)
+    TextView tvLightX;
+    @BindView(R.id.tv_record)
+    TextView tvRecord;
+    @BindView(R.id.tv_clear_map)
+    TextView tvClearMap;
 
     /**
      * Flag indicating whether a requested permission has been denied after returning in
@@ -98,12 +112,13 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private boolean mPermissionDenied = false;
     private GoogleMap mMap;
     private Handler handler;
-    private Marker mCusMarker;//自定义Marker
-    private double lat = 39.1160770147;
-    private double lng = 117.2135210037;
+    private double lat = 0;
+    private double lng = 0;
     private int frequency = 5;//传感器更新频率，单位秒
     private Timer timer;
     private TimerTask task;
+    private Timer timer_acc;
+    private TimerTask task_acc;
     private PopupWindow popupWindow;
     private LocationManager lm;
     private File file;
@@ -117,6 +132,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private JSONArray jsonArray = new JSONArray();
     private boolean isExists;
     private String filePath;
+    private boolean isRecord;//是否在采集中
 
     @SuppressLint("HandlerLeak")
     @Override
@@ -145,15 +161,20 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         }
                         if (lat > 0 && lng > 0) {
                             LatLng myLatLng = new LatLng(lat, lng);
-                            mCusMarker = mMap.addMarker(new MarkerOptions()
+                            mMap.addMarker(new MarkerOptions()
                                     .position(myLatLng)
                                     .flat(true)//标记平面化
-                                    //                                    .rotation(45.0f)//将标记旋转45度
-                                    //                                    .icon(BitmapDescriptorFactory.defaultMarker()));
+                                    //.rotation(45.0f)//将标记旋转45度
+                                    //.icon(BitmapDescriptorFactory.defaultMarker()));
                                     .icon(BitmapDescriptorFactory.fromResource(R.drawable.marker)));
-                            mMap.moveCamera(CameraUpdateFactory.newLatLng(new LatLng(lat, lng)));
+//                            mMap.moveCamera(CameraUpdateFactory.newLatLng(new LatLng(lat, lng)));
                         }
                         Log.e("location", ":" + lat + ";" + lng);
+                        break;
+                    case 2:
+                        tvAccX.setText("AccelerationX：" + accelerationBean.getX());
+                        tvAccY.setText("AccelerationY：" + accelerationBean.getY());
+                        tvAccZ.setText("AccelerationZ: " + accelerationBean.getZ());
                         break;
                     default:
                         break;
@@ -175,13 +196,13 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             filePath = Environment.getExternalStorageDirectory().getPath() + "/Miner";
             makeRootDirectory(filePath);
         } else {
-            Toast.makeText(MapsActivity.this, "SD卡不存在", Toast.LENGTH_SHORT).show();
+            Toast.makeText(MapsActivity.this, "No SDCard!", Toast.LENGTH_SHORT).show();
         }
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
 
         // 判断GPS是否正常启动
         if (!lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-            Toast.makeText(this, "请开启GPS导航...", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Please open the GPS navigation...", Toast.LENGTH_SHORT).show();
             // 返回开启GPS导航设置界面
             Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
             startActivityForResult(intent, 0);
@@ -246,13 +267,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                btPop.setText(getResources().getString(R.string.frequency) + data.get(i) + "s");
+                tvPop.setText(getResources().getString(R.string.frequency));
                 frequency = data.get(i);
                 popupWindow.dismiss();
-                updateTimer();
             }
         });
-        popupWindow = new PopupWindow(listView, btPop.getWidth(), ActionBar.LayoutParams.WRAP_CONTENT, true);
+        popupWindow = new PopupWindow(listView, tvPop.getWidth(), ActionBar.LayoutParams.WRAP_CONTENT, true);
         // 取得popup窗口的背景图片
         Drawable drawable = ContextCompat.getDrawable(this, R.drawable.button_fliter_down);
         popupWindow.setBackgroundDrawable(drawable);
@@ -272,11 +292,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
      * 初始化点击事件监听器
      */
     private void initListener() {
-        btGetdata.setOnClickListener(this);
-        btStop.setOnClickListener(this);
-        btClearMap.setOnClickListener(this);
-        btPop.setOnClickListener(this);
-        btVideoRecord.setOnClickListener(this);
+        tvRecord.setOnClickListener(this);
+        tvClearMap.setOnClickListener(this);
+        tvPop.setOnClickListener(this);
     }
 
     /**
@@ -357,6 +375,22 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         };
         timer.schedule(task, 0, frequency * 1000);
+
+    }
+
+    private void updateAaccTimer() {
+        if (timer_acc != null && timer_acc != null) {
+            timer_acc.cancel();
+            task_acc.cancel();
+        }
+        timer_acc = new Timer();
+        task_acc = new TimerTask() {
+            @Override
+            public void run() {
+                handler.sendEmptyMessage(2);
+            }
+        };
+        timer_acc.schedule(task_acc, 0, 1000);
     }
 
 
@@ -377,7 +411,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Override
     public boolean onMyLocationButtonClick() {
-        Toast.makeText(this, "MyLocation button clicked", Toast.LENGTH_SHORT).show();
         return false;
     }
 
@@ -447,6 +480,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 //                    光线传感器
                 case Sensor.TYPE_LIGHT:
                     lightBean.setX(xValue);
+                    tvLightX.setText("Light: " + xValue);
                     break;
                 //                    温度传感器
                 case Sensor.TYPE_AMBIENT_TEMPERATURE:
@@ -579,12 +613,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     };
 
 
-    public static String ms2Date(long _ms) {
-        Date date = new Date(_ms);
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        return format.format(date);
-    }
-
     /**
      * 实时更新文本内容
      *
@@ -594,9 +622,16 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (location != null) {
             lat = location.getLatitude();
             lng = location.getLongitude();
-            gpsBean = new GPSBean(String.valueOf(location.getLongitude()), String.valueOf(location.getLatitude()), ms2Date(location.getTime()), String.valueOf(location.getAltitude()), String.valueOf(location.getBearing()), String.valueOf(location.getBearing()), location.getProvider(), String.valueOf(location.getAccuracy()), String.valueOf(location.getElapsedRealtimeNanos()));
-        } else {
-            Toast.makeText(MapsActivity.this, "位置提供者:" + bestProvider + "     location为null", Toast.LENGTH_SHORT).show();
+            gpsBean = new GPSBean(String.valueOf(location.getLongitude()),
+                    String.valueOf(location.getLatitude()),
+                    String.valueOf(location.getAltitude()),
+                    String.valueOf(location.getSpeed()),
+                    String.valueOf(location.getBearing()));
+            tvGpsLat.setText("Longitude: " + location.getLatitude());
+            tvGpsLng.setText("Latitude: " + location.getLongitude());
+            tvGpsAlt.setText("Altitude: " + location.getAltitude());
+            tvGpsSpeed.setText("Speed: " + location.getSpeed());
+            tvGpsBearing.setText("Bearing: " + location.getBearing());
         }
     }
 
@@ -706,6 +741,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             timer.cancel();
             task.cancel();
         }
+        if (timer_acc != null && task_acc != null) {
+            timer_acc.cancel();
+            task_acc.cancel();
+        }
         stopGetData();
     }
 
@@ -721,40 +760,49 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
-            case R.id.bt_getdata:
-                Toast.makeText(MapsActivity.this, "开始获取数据", Toast.LENGTH_SHORT).show();
-                //获取数据
-                updateTimer();
-                if (null != mSensorManager) {
-                    mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-                    mSensorManager.registerListener(sensorEventListener, mAccelerometer, SensorManager.SENSOR_DELAY_UI);
-                    mLightSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
-                    mSensorManager.registerListener(sensorEventListener, mLightSensor, SensorManager.SENSOR_DELAY_UI);
+            case R.id.tv_record:
+                if (!isRecord) {
+                    Toast.makeText(MapsActivity.this, "Start getting data", Toast.LENGTH_SHORT).show();
+                    //获取数据
+                    updateTimer();
+                    updateAaccTimer();
+                    if (null != mSensorManager) {
+                        mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+                        mSensorManager.registerListener(sensorEventListener, mAccelerometer, SensorManager.SENSOR_DELAY_UI);
+                        mLightSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
+                        mSensorManager.registerListener(sensorEventListener, mLightSensor, SensorManager.SENSOR_DELAY_UI);
+                    }
+                    tvRecord.setText("Stop");
+                    tvRecord.setTextColor(Color.RED);
+                    isRecord = true;
+                } else {
+                    if (timer != null && task != null) {
+                        timer.cancel();
+                        task.cancel();
+                    }
+                    if (timer_acc != null && task_acc != null) {
+                        timer_acc.cancel();
+                        task_acc.cancel();
+                    }
+                    stopGetData();
+                    tvRecord.setText("Record");
+                    tvRecord.setTextColor(Color.BLACK);
+                    isRecord = false;
                 }
+
                 break;
-            case R.id.bt_stop:
-                //停止监听
-                if (timer != null && task != null) {
-                    timer.cancel();
-                    task.cancel();
-                }
-                stopGetData();
-                break;
-            case R.id.bt_clear_map:
+            case R.id.tv_clear_map:
                 //清空map
                 if (mMap != null) {
                     mMap.clear();
                 }
                 break;
-            case R.id.bt_pop:
+            case R.id.tv_pop:
                 //下拉列表
                 initSpinner();
                 if (popupWindow != null && !popupWindow.isShowing()) {
-                    popupWindow.showAsDropDown(btPop, 0, 5);
+                    popupWindow.showAsDropDown(tvPop, 0, 5);
                 }
-                break;
-            case R.id.bt_video_record:
-                Toast.makeText(MapsActivity.this, "该功能暂未开通！", Toast.LENGTH_SHORT).show();
                 break;
             default:
                 break;

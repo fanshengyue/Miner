@@ -55,7 +55,7 @@ public class TimeListAdapter extends BaseAdapter {
         } else {
             holder = (ViewHolder) view.getTag();
         }
-        holder.tvTime.setText(mContext.getResources().getString(R.string.frequency) + data.get(i) + "s");
+        holder.tvTime.setText(data.get(i) + "s");
 
         return view;
     }
