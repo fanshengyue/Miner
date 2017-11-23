@@ -11,6 +11,7 @@
         tools:context="com.fsy.google.MapsActivity"
         >
     </fragment>
+    
     <Button
         android:id="@+id/bt_pop"
         android:layout_width="80dp"
@@ -21,6 +22,7 @@
         android:background="@drawable/button_fliter_down"
         >
     </Button>
+    
     <CheckBox
         android:id="@+id/cb_traffic"
         android:layout_width="wrap_content"
@@ -30,12 +32,37 @@
         android:layout_gravity="center_horizontal|top"
         android:layout_marginRight="10dp"
         android:layout_marginTop="15dp"/>
-    <Button
-        android:id="@+id/bt_getdata"
+
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="获取数据"
         android:layout_gravity="bottom|right"
         android:layout_marginBottom="10dp"
-        android:layout_marginRight="10dp"/>
+        android:layout_marginRight="10dp"
+        android:orientation="vertical">
+
+        <Button
+            android:id="@+id/bt_getdata"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="获取数据" />
+
+        <Button
+            android:id="@+id/bt_stop"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="停 止" />
+
+        <Button
+            android:id="@+id/bt_clear_map"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="清空地图" />
+        <Button
+            android:id="@+id/bt_video_record"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="视频录制" />
+    </LinearLayout>
+
 </FrameLayout>
