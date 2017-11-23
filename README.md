@@ -1,3 +1,0 @@
-# Miner
-
-for android

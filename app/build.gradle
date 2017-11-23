@@ -3,23 +3,43 @@ apply plugin: 'com.android.application'
 android {
     compileSdkVersion 26
     defaultConfig {
-        applicationId "com.fsy.google"
-        minSdkVersion 21
+        applicationId "com.miner"
+        minSdkVersion 14
         targetSdkVersion 26
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
+
+    buildToolsVersion '26.0.2'
+    signingConfigs {
+        debug {
+            storeFile file('/Users/fanshengyue/keystore/miner.jks')//签名文件路径
+            storePassword "miner314159"
+            keyAlias "miner"
+            keyPassword "miner314159"  //签名密码
+        }
+        release {
+            storeFile file('/Users/fanshengyue/keystore/miner.jks')//签名文件路径
+            storePassword "miner314159"
+            keyAlias "miner"
+            keyPassword "miner314159"  //签名密码
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+        }
+        debug {
+            signingConfig signingConfigs.debug
         }
     }
 }
 
 dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation 'com.android.support:appcompat-v7:26.1.0'
     implementation 'com.google.android.gms:play-services-maps:11.6.0'
     testImplementation 'junit:junit:4.12'
