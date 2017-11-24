@@ -116,24 +116,28 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
+            android:text="AccelerationX:0.0"
             />
         <TextView
             android:id="@+id/tv_acc_y"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
+            android:text="AccelerationY:0.0"
             />
         <TextView
             android:id="@+id/tv_acc_z"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
+            android:text="AccelerationZ:0.0"
             />
         <TextView
             android:id="@+id/tv_light_x"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
+            android:text="LightX:0.0"
             />
 
     </LinearLayout>

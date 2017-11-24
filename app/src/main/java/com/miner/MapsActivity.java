@@ -143,7 +143,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private String filePath;
     private boolean isRecord;//是否在采集中
     private boolean isOpen = false;//抽屉是否在打开状态
-    private List<Integer> data;
+    private List<Integer>data;
 
     @SuppressLint("HandlerLeak")
     @Override
@@ -227,8 +227,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         // 获取位置信息
         // 如果不设置查询要求，getLastKnownLocation方法传人的参数为LocationManager.GPS_PROVIDER
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
+                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
             //    ActivityCompat#requestPermissions
             // here to request the missing permissions, and then overriding
@@ -267,7 +266,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     /**
      * 初始化数据
      */
-    private void initData() {
+    private void initData(){
         data = new ArrayList<>();
         data.add(1);
         data.add(5);
@@ -276,7 +275,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         data.add(30);
         data.add(60);
     }
-
     /**
      * 设置下拉列表
      */
@@ -606,8 +604,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
          */
         public void onProviderEnabled(String provider) {
             if (ActivityCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_FINE_LOCATION)
-                    != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(MapsActivity.this,
-                    Manifest.permission.ACCESS_COARSE_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION)
                     != PackageManager.PERMISSION_GRANTED) {
                 // TODO: Consider calling
                 //    ActivityCompat#requestPermissions
@@ -895,9 +892,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 break;
             case R.id.tv_frequency:
                 //Frequency
-                if (lvFrequency.getVisibility() == View.VISIBLE) {
+                if(lvFrequency.getVisibility()==View.VISIBLE){
                     lvFrequency.setVisibility(View.GONE);
-                } else {
+                }else{
                     lvFrequency.setVisibility(View.VISIBLE);
                 }
                 break;
