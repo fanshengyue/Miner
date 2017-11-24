@@ -11,7 +11,13 @@
         tools:context="com.fsy.google.MapsActivity"
         >
     </fragment>
-    
+    <ImageView
+        android:id="@+id/iv_setting"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginLeft="15dp"
+        android:src="@drawable/setting"/>
     <TextView
         android:id="@+id/tv_pop"
         android:layout_width="wrap_content"
@@ -21,8 +27,8 @@
         android:text="Frequency"
         android:textSize="12sp"
         android:gravity="center"
-        android:textColor="#000000"
         android:background="@drawable/button_fliter_down"
+        android:visibility="gone"
         >
     </TextView>
     
@@ -32,11 +38,11 @@
         android:layout_height="40dp"
         android:text="Traffic"
         android:textSize="12sp"
+        android:textColor="@color/ori_textcolor"
         android:onClick="onTrafficToggled"
         android:layout_gravity="center_horizontal|top"
         android:layout_marginRight="10dp"
         android:layout_marginTop="10dp"
-        android:textColor="#000000"
         android:background="@drawable/button_fliter_down"/>
 
     <LinearLayout
@@ -52,7 +58,6 @@
             android:layout_width="match_parent"
             android:layout_height="40dp"
             android:text="Record"
-            android:textColor="#000000"
             android:gravity="center"
             android:background="@drawable/button_fliter_down"/>
 
@@ -62,7 +67,6 @@
             android:layout_height="40dp"
             android:text="ClearMap"
             android:gravity="center"
-            android:textColor="#000000"
             android:background="@drawable/button_fliter_down"
             android:layout_marginTop="10dp"/>
 
@@ -82,63 +86,54 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
-            android:textColor="#000000"
             />
         <TextView
             android:id="@+id/tv_gps_lng"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
-            android:textColor="#000000"
             />
         <TextView
             android:id="@+id/tv_gps_alt"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
-            android:textColor="#000000"
             />
         <TextView
             android:id="@+id/tv_gps_speed"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
-            android:textColor="#000000"
             />
         <TextView
             android:id="@+id/tv_gps_bearing"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
-            android:textColor="#000000"
             />
         <TextView
             android:id="@+id/tv_acc_x"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
-            android:textColor="#000000"
             />
         <TextView
             android:id="@+id/tv_acc_y"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
-            android:textColor="#000000"
             />
         <TextView
             android:id="@+id/tv_acc_z"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
-            android:textColor="#000000"
             />
         <TextView
             android:id="@+id/tv_light_x"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
-            android:textColor="#000000"
             />
 
     </LinearLayout>

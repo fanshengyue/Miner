@@ -27,12 +27,14 @@ import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
-import android.view.Window;
 import android.widget.AdapterView;
 import android.widget.CheckBox;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.PopupWindow;
 import android.widget.TextView;
@@ -104,7 +106,14 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     TextView tvRecord;
     @BindView(R.id.tv_clear_map)
     TextView tvClearMap;
-
+    @BindView(R.id.dw_layout)
+    DrawerLayout dwLayout;
+    @BindView(R.id.iv_setting)
+    ImageView ivSetting;
+    @BindView(R.id.tv_frequency)
+    TextView tvFrequency;
+    @BindView(R.id.lv_frequency)
+    ListView lvFrequency;
     /**
      * Flag indicating whether a requested permission has been denied after returning in
      * {@link #onRequestPermissionsResult(int, String[], int[])}.
@@ -133,12 +142,14 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private boolean isExists;
     private String filePath;
     private boolean isRecord;//是否在采集中
+    private boolean isOpen = false;//抽屉是否在打开状态
+    private List<Integer> data;
 
     @SuppressLint("HandlerLeak")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_map);
+        setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -169,7 +180,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                     .icon(BitmapDescriptorFactory.fromResource(R.drawable.marker)));
 //                            mMap.moveCamera(CameraUpdateFactory.newLatLng(new LatLng(lat, lng)));
                         }
-                        Log.e("location", ":" + lat + ";" + lng);
+                        Log.i("location", ":" + lat + ";" + lng);
                         break;
                     case 2:
                         tvAccX.setText("AccelerationX：" + accelerationBean.getX());
@@ -188,6 +199,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
      * 初始化方法
      */
     private void initAll() {
+        initData();
         initListener();
         setWriteReadPermission();
         lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
@@ -214,7 +226,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         // 获取位置信息
         // 如果不设置查询要求，getLastKnownLocation方法传人的参数为LocationManager.GPS_PROVIDER
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
             //    ActivityCompat#requestPermissions
             // here to request the missing permissions, and then overriding
@@ -251,17 +265,23 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     /**
-     * 设置下拉列表
+     * 初始化数据
      */
-    private void initSpinner() {
-        ListView listView = new ListView(this);
-        final List<Integer> data = new ArrayList<>();
+    private void initData() {
+        data = new ArrayList<>();
         data.add(1);
         data.add(5);
         data.add(10);
         data.add(20);
         data.add(30);
         data.add(60);
+    }
+
+    /**
+     * 设置下拉列表
+     */
+    private void initSpinner() {
+        ListView listView = new ListView(this);
         TimeListAdapter adapter = new TimeListAdapter(this, data);
         listView.setAdapter(adapter);
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -270,6 +290,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 tvPop.setText(getResources().getString(R.string.frequency));
                 frequency = data.get(i);
                 popupWindow.dismiss();
+                if (isRecord) {
+                    updateTimer();
+                }
             }
         });
         popupWindow = new PopupWindow(listView, tvPop.getWidth(), ActionBar.LayoutParams.WRAP_CONTENT, true);
@@ -289,12 +312,48 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     /**
-     * 初始化点击事件监听器
+     * 初始化监听器
      */
     private void initListener() {
         tvRecord.setOnClickListener(this);
         tvClearMap.setOnClickListener(this);
         tvPop.setOnClickListener(this);
+        ivSetting.setOnClickListener(this);
+        tvFrequency.setOnClickListener(this);
+        TimeListAdapter adapter = new TimeListAdapter(this, data);
+        lvFrequency.setAdapter(adapter);
+        lvFrequency.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                frequency = data.get(i);
+                if (isRecord) {
+                    updateTimer();
+                }
+                switchDrawlayout();
+            }
+        });
+        dwLayout.setDrawerListener(new DrawerLayout.DrawerListener() {
+            @Override
+            public void onDrawerSlide(View drawerView, float slideOffset) {
+
+            }
+
+            @Override
+            public void onDrawerOpened(View drawerView) {
+                drawerView.setClickable(true);
+                isOpen = true;
+            }
+
+            @Override
+            public void onDrawerClosed(View drawerView) {
+                isOpen = false;
+            }
+
+            @Override
+            public void onDrawerStateChanged(int newState) {
+
+            }
+        });
     }
 
     /**
@@ -324,6 +383,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     }
 
+    /**
+     * 设置6.0以上读写权限
+     */
     private void setWriteReadPermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -361,6 +423,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         return true;
     }
 
+    /**
+     * 更新定时器
+     */
     private void updateTimer() {
         if (timer != null && task != null) {
             timer.cancel();
@@ -459,7 +524,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 .newInstance(true).show(getSupportFragmentManager(), "dialog");
     }
 
-    //传感器监听
+    /**
+     * 传感器监听
+     */
     private SensorEventListener sensorEventListener = new SensorEventListener() {
         @Override
         public void onSensorChanged(SensorEvent sensorEvent) {
@@ -498,8 +565,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     };
 
-
-    // 位置监听
+    /**
+     * 位置监听
+     */
     private LocationListener locationListener = new LocationListener() {
 
         /**
@@ -538,7 +606,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
          */
         public void onProviderEnabled(String provider) {
             if (ActivityCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_FINE_LOCATION)
-                    != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(MapsActivity.this,
+                    Manifest.permission.ACCESS_COARSE_LOCATION)
                     != PackageManager.PERMISSION_GRANTED) {
                 // TODO: Consider calling
                 //    ActivityCompat#requestPermissions
@@ -573,9 +642,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     break;
                 // 卫星状态改变
                 case GpsStatus.GPS_EVENT_SATELLITE_STATUS:
-                    Log.i(TAG, "卫星状态改变");
                     // 获取当前状态
-                    if (ActivityCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    if (ActivityCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_FINE_LOCATION)
+                            != PackageManager.PERMISSION_GRANTED) {
                         // TODO: Consider calling
                         //    ActivityCompat#requestPermissions
                         // here to request the missing permissions, and then overriding
@@ -596,7 +665,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         GpsSatellite s = iters.next();
                         count++;
                     }
-                    System.out.println("搜索到：" + count + "颗卫星");
                     break;
                 // 定位启动
                 case GpsStatus.GPS_EVENT_STARTED:
@@ -748,6 +816,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         stopGetData();
     }
 
+    /**
+     * 停止采集数据
+     */
     private void stopGetData() {
         if (lm != null) {
             lm.removeUpdates(locationListener);
@@ -755,6 +826,20 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (mSensorManager != null) {
             mSensorManager.unregisterListener(sensorEventListener);
         }
+    }
+
+    /**
+     * 抽屉打开/关闭
+     *
+     * @param
+     */
+    public void switchDrawlayout() {
+        if (isOpen) {
+            dwLayout.closeDrawer(Gravity.LEFT);
+        } else {
+            dwLayout.openDrawer(Gravity.LEFT);
+        }
+        isOpen = !isOpen;
     }
 
     @Override
@@ -786,7 +871,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     }
                     stopGetData();
                     tvRecord.setText("Record");
-                    tvRecord.setTextColor(Color.BLACK);
+                    tvRecord.setTextColor(getResources().getColor(R.color.ori_textcolor));
                     isRecord = false;
                 }
 
@@ -802,6 +887,18 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 initSpinner();
                 if (popupWindow != null && !popupWindow.isShowing()) {
                     popupWindow.showAsDropDown(tvPop, 0, 5);
+                }
+                break;
+            case R.id.iv_setting:
+                //Open the Drawer
+                switchDrawlayout();
+                break;
+            case R.id.tv_frequency:
+                //Frequency
+                if (lvFrequency.getVisibility() == View.VISIBLE) {
+                    lvFrequency.setVisibility(View.GONE);
+                } else {
+                    lvFrequency.setVisibility(View.VISIBLE);
                 }
                 break;
             default:
