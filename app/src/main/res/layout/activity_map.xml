@@ -11,58 +11,135 @@
         tools:context="com.fsy.google.MapsActivity"
         >
     </fragment>
-    
-    <Button
-        android:id="@+id/bt_pop"
-        android:layout_width="80dp"
+    <ImageView
+        android:id="@+id/iv_setting"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginLeft="15dp"
+        android:src="@drawable/setting"/>
+    <TextView
+        android:id="@+id/tv_pop"
+        android:layout_width="wrap_content"
         android:layout_height="40dp"
         android:layout_marginTop="10dp"
         android:layout_marginLeft="10dp"
-        android:text="更新频率：5s"
+        android:text="Frequency"
+        android:textSize="12sp"
+        android:gravity="center"
         android:background="@drawable/button_fliter_down"
+        android:visibility="gone"
         >
-    </Button>
+    </TextView>
     
     <CheckBox
         android:id="@+id/cb_traffic"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="路况"
+        android:layout_height="40dp"
+        android:text="Traffic"
+        android:textSize="12sp"
+        android:textColor="@color/ori_textcolor"
         android:onClick="onTrafficToggled"
         android:layout_gravity="center_horizontal|top"
         android:layout_marginRight="10dp"
-        android:layout_marginTop="15dp"/>
+        android:layout_marginTop="10dp"
+        android:background="@drawable/button_fliter_down"/>
 
     <LinearLayout
-        android:layout_width="wrap_content"
+        android:layout_width="100dp"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|right"
         android:layout_marginBottom="10dp"
         android:layout_marginRight="10dp"
         android:orientation="vertical">
 
-        <Button
-            android:id="@+id/bt_getdata"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="获取数据" />
+        <TextView
+            android:id="@+id/tv_record"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:text="Record"
+            android:gravity="center"
+            android:background="@drawable/button_fliter_down"/>
 
-        <Button
-            android:id="@+id/bt_stop"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="停 止" />
+        <TextView
+            android:id="@+id/tv_clear_map"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:text="ClearMap"
+            android:gravity="center"
+            android:background="@drawable/button_fliter_down"
+            android:layout_marginTop="10dp"/>
 
-        <Button
-            android:id="@+id/bt_clear_map"
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="left|bottom"
+        android:layout_marginLeft="10dp"
+        android:layout_marginBottom="40dp"
+        android:background="@android:color/transparent"
+        >
+        <TextView
+            android:id="@+id/tv_gps_lat"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="清空地图" />
-        <Button
-            android:id="@+id/bt_video_record"
+            android:maxLines="1"
+            />
+        <TextView
+            android:id="@+id/tv_gps_lng"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="视频录制" />
+            android:maxLines="1"
+            />
+        <TextView
+            android:id="@+id/tv_gps_alt"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            />
+        <TextView
+            android:id="@+id/tv_gps_speed"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            />
+        <TextView
+            android:id="@+id/tv_gps_bearing"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            />
+        <TextView
+            android:id="@+id/tv_acc_x"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:text="AccelerationX:0.0"
+            />
+        <TextView
+            android:id="@+id/tv_acc_y"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:text="AccelerationY:0.0"
+            />
+        <TextView
+            android:id="@+id/tv_acc_z"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:text="AccelerationZ:0.0"
+            />
+        <TextView
+            android:id="@+id/tv_light_x"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:text="LightX:0.0"
+            />
+
     </LinearLayout>
 
 </FrameLayout>
