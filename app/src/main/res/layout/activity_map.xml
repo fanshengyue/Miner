@@ -86,30 +86,35 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
+            android:text="Latitude:0.0"
             />
         <TextView
             android:id="@+id/tv_gps_lng"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
+            android:text="Longitude:0.0"
             />
         <TextView
             android:id="@+id/tv_gps_alt"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
+            android:text="Altitude:0.0"
             />
         <TextView
             android:id="@+id/tv_gps_speed"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
+            android:text="Speed:0.0"
             />
         <TextView
             android:id="@+id/tv_gps_bearing"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
+            android:text="Heading:0.0"
             />
         <TextView
             android:id="@+id/tv_acc_x"

@@ -135,7 +135,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private String bestProvider;
     private Sensor mAccelerometer;
     private Sensor mLightSensor;
-    private GPSBean gpsBean;//GPS
+    private GPSBean gpsBean=new GPSBean();//GPS
     private LightBean lightBean = new LightBean();//光线
     private AccelerationBean accelerationBean = new AccelerationBean();//加速度
     private JSONArray jsonArray = new JSONArray();
@@ -703,13 +703,13 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (location != null) {
             lat = location.getLatitude();
             lng = location.getLongitude();
-            gpsBean = new GPSBean(String.valueOf(location.getLongitude()),
-                    String.valueOf(location.getLatitude()),
-                    String.valueOf(location.getAltitude()),
-                    String.valueOf(location.getSpeed()),
-                    String.valueOf(location.getBearing()));
-            tvGpsLat.setText("Longitude: " + location.getLatitude());
-            tvGpsLng.setText("Latitude: " + location.getLongitude());
+            gpsBean.setLongitude(location.getLongitude());
+            gpsBean.setLatitude(location.getLatitude());
+            gpsBean.setAltitude(location.getAltitude());
+            gpsBean.setBearing(location.getBearing());
+            gpsBean.setSpeed(location.getSpeed());
+            tvGpsLat.setText("Latitude: " + location.getLatitude());
+            tvGpsLng.setText("Longitude: " + location.getLongitude());
             tvGpsAlt.setText("Altitude: " + location.getAltitude());
             tvGpsSpeed.setText("Speed: " + location.getSpeed());
             tvGpsBearing.setText("Heading: " + location.getBearing());
@@ -761,7 +761,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             object_acc.put("accz", accelerationBean.getZ());
             jsonObject.put("acc", object_acc);
             JSONObject object_gps = new JSONObject();
-            object_gps.put("longitude", gpsBean.getLongitude());
+            object_gps.put("longitude",gpsBean.getLongitude());
             object_gps.put("latitude", gpsBean.getLatitude());
             object_gps.put("altitude", gpsBean.getAltitude());
             object_gps.put("speed", gpsBean.getSpeed());
@@ -882,14 +882,18 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         switch (view.getId()) {
             case R.id.tv_record:
                 if (!isRecord) {
-                    jsonArray=new JSONArray();
-                    mCurrentTime=System.currentTimeMillis();
-                    Toast.makeText(MapsActivity.this, "Start getting data", Toast.LENGTH_SHORT).show();
-                    //获取数据
-                    updateTimer();
-                    tvRecord.setText("Stop");
-                    tvRecord.setTextColor(Color.RED);
-                    isRecord = true;
+                    if(gpsBean.getLongitude()!=0&&gpsBean.getLatitude()!=0){
+                        jsonArray=new JSONArray();
+                        mCurrentTime=System.currentTimeMillis();
+                        Toast.makeText(MapsActivity.this, "Start getting data", Toast.LENGTH_SHORT).show();
+                        //获取数据
+                        updateTimer();
+                        tvRecord.setText("Stop");
+                        tvRecord.setTextColor(Color.RED);
+                        isRecord = true;
+                    }else{
+                        Toast.makeText(MapsActivity.this,"If you have no access to your location information, open your cell phone GPS",Toast.LENGTH_SHORT).show();
+                    }
                 } else {
                     if (timer != null && task != null) {
                         timer.cancel();
