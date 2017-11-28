@@ -144,6 +144,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private boolean isRecord;//是否在采集中
     private boolean isOpen = false;//抽屉是否在打开状态
     private List<Integer>data;
+    private long mCurrentTime;
+    private int writeFlag=0;
 
     @SuppressLint("HandlerLeak")
     @Override
@@ -164,8 +166,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     case 1:
                         try {
                             if (isExists) {
-                                file = makeFilePath(filePath, "/" + System.currentTimeMillis() + ".json");
-                                writeTxtToFile(dealBean());
+                                dealBean();
                             }
                         } catch (JSONException e) {
                             e.printStackTrace();
@@ -183,16 +184,30 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         Log.i("location", ":" + lat + ";" + lng);
                         break;
                     case 2:
-                        tvAccX.setText("AccelerationX：" + accelerationBean.getX());
-                        tvAccY.setText("AccelerationY：" + accelerationBean.getY());
-                        tvAccZ.setText("AccelerationZ: " + accelerationBean.getZ());
+                        if(accelerationBean!=null){
+                            if(accelerationBean.getX()>0||accelerationBean.getX()<0){
+                                tvAccX.setText("AccelerationX：" + accelerationBean.getX());
+                            }
+                            if(accelerationBean.getY()>0||accelerationBean.getY()<0){
+                                tvAccY.setText("AccelerationY：" + accelerationBean.getY());
+                            }
+                            if(accelerationBean.getZ()>0||accelerationBean.getZ()<0){
+                                tvAccZ.setText("AccelerationZ: " + accelerationBean.getZ());
+                            }
+                        }
                         break;
                     default:
                         break;
                 }
             }
         };
-
+        if (null != mSensorManager) {
+            mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+            mSensorManager.registerListener(sensorEventListener, mAccelerometer, SensorManager.SENSOR_DELAY_UI);
+            mLightSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
+            mSensorManager.registerListener(sensorEventListener, mLightSensor, SensorManager.SENSOR_DELAY_UI);
+        }
+        updateAaccTimer();
     }
 
     /**
@@ -261,6 +276,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         // 1秒更新一次，或最小位移变化超过1米更新一次；
         // 注意：此处更新准确度非常低，推荐在service里面启动一个Thread，在run中sleep(10000);然后执行handler.sendMessage(),更新位置
         lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, locationListener);
+
     }
 
     /**
@@ -696,24 +712,41 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             tvGpsLng.setText("Latitude: " + location.getLongitude());
             tvGpsAlt.setText("Altitude: " + location.getAltitude());
             tvGpsSpeed.setText("Speed: " + location.getSpeed());
-            tvGpsBearing.setText("Bearing: " + location.getBearing());
+            tvGpsBearing.setText("Heading: " + location.getBearing());
         }
     }
 
 
     // 将字符串写入到文本文件中
     public void writeTxtToFile(JSONArray array) {
-
-        String strContent = array + "";
-        RandomAccessFile raf = null;
-        try {
-            raf = new RandomAccessFile(file, "rwd");
-            raf.seek(file.length());
-            raf.write(strContent.getBytes());
-            raf.close();
-        } catch (Exception e) {
-            e.printStackTrace();
+        String strContent="No data has been taken for the time being";
+        if(isRecord){
+            if(jsonArray.length()>=2000){
+                writeFlag++;
+            }else{
+                writeFlag=0;
+            }
         }
+        if(writeFlag>0){
+            file = makeFilePath(filePath, "/" + mCurrentTime +"-"+writeFlag+ ".json");
+        }else{
+            file = makeFilePath(filePath, "/" + mCurrentTime + ".json");
+        }
+            try {
+                if (array.length()>0) {
+                    strContent= array + "";
+                }
+                RandomAccessFile raf = null;
+                raf = new RandomAccessFile(file, "rwd");
+                raf.seek(file.length());
+                raf.write(strContent.getBytes());
+                raf.close();
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        jsonArray=new JSONArray();
+
 
     }
 
@@ -738,6 +771,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             object_light.put("lightx", lightBean.getX());
             jsonObject.put("light", object_light);
             jsonArray.put(jsonObject);
+            if(jsonArray.length()>2000){
+                writeTxtToFile(jsonArray);
+            }
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -810,6 +846,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             timer_acc.cancel();
             task_acc.cancel();
         }
+        writeFlag=0;
+        writeTxtToFile(jsonArray);
         stopGetData();
     }
 
@@ -844,16 +882,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         switch (view.getId()) {
             case R.id.tv_record:
                 if (!isRecord) {
+                    jsonArray=new JSONArray();
+                    mCurrentTime=System.currentTimeMillis();
                     Toast.makeText(MapsActivity.this, "Start getting data", Toast.LENGTH_SHORT).show();
                     //获取数据
                     updateTimer();
-                    updateAaccTimer();
-                    if (null != mSensorManager) {
-                        mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-                        mSensorManager.registerListener(sensorEventListener, mAccelerometer, SensorManager.SENSOR_DELAY_UI);
-                        mLightSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
-                        mSensorManager.registerListener(sensorEventListener, mLightSensor, SensorManager.SENSOR_DELAY_UI);
-                    }
                     tvRecord.setText("Stop");
                     tvRecord.setTextColor(Color.RED);
                     isRecord = true;
@@ -862,11 +895,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         timer.cancel();
                         task.cancel();
                     }
-                    if (timer_acc != null && task_acc != null) {
-                        timer_acc.cancel();
-                        task_acc.cancel();
-                    }
-                    stopGetData();
+                    writeFlag=0;
+                    writeTxtToFile(jsonArray);
                     tvRecord.setText("Record");
                     tvRecord.setTextColor(getResources().getColor(R.color.ori_textcolor));
                     isRecord = false;
