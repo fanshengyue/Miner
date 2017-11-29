@@ -772,6 +772,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     }
 
+    /**
+     * 转换时间格式
+     * @param _ms
+     * @return
+     */
     public static String ms2Date(long _ms){
         Date date = new Date(_ms);
         SimpleDateFormat format = new SimpleDateFormat("yyyyMMddHHmmss");
