@@ -8,67 +8,54 @@ package com.miner.bean;
 public class GPSBean {
 
 //    经度
-    private String longitude;
+    private double longitude;
 //    纬度
-    private String latitude;
+    private double latitude;
 //    海拔
-    private String altitude;
+    private double altitude;
 //    速度
-    private String speed;
+    private double speed;
 //    方向
-    private String bearing;
+    private double bearing;
 
 
-
-    public GPSBean() {
-    }
-
-    public GPSBean( String longitude, String latitude, String altitude, String speed, String bearing) {
-        this.longitude = longitude;
-        this.latitude = latitude;
-        this.altitude = altitude;
-        this.speed = speed;
-        this.bearing = bearing;
-
-    }
-
-    public String getLongitude() {
+    public double getLongitude() {
         return longitude;
     }
 
-    public void setLongitude(String longitude) {
+    public void setLongitude(double longitude) {
         this.longitude = longitude;
     }
 
-    public String getLatitude() {
+    public double getLatitude() {
         return latitude;
     }
 
-    public void setLatitude(String latitude) {
+    public void setLatitude(double latitude) {
         this.latitude = latitude;
     }
 
-    public String getAltitude() {
+    public double getAltitude() {
         return altitude;
     }
 
-    public void setAltitude(String altitude) {
+    public void setAltitude(double altitude) {
         this.altitude = altitude;
     }
 
-    public String getSpeed() {
+    public double getSpeed() {
         return speed;
     }
 
-    public void setSpeed(String speed) {
+    public void setSpeed(double speed) {
         this.speed = speed;
     }
 
-    public String getBearing() {
+    public double getBearing() {
         return bearing;
     }
 
-    public void setBearing(String bearing) {
+    public void setBearing(double bearing) {
         this.bearing = bearing;
     }
 }
