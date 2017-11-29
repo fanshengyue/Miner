@@ -51,6 +51,7 @@ import com.miner.adapter.TimeListAdapter;
 import com.miner.bean.AccelerationBean;
 import com.miner.bean.GPSBean;
 import com.miner.bean.LightBean;
+import com.miner.utils.DateUtil;
 import com.miner.utils.PermissionUtils;
 
 import org.json.JSONArray;
@@ -59,7 +60,9 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.RandomAccessFile;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Timer;
@@ -135,7 +138,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private String bestProvider;
     private Sensor mAccelerometer;
     private Sensor mLightSensor;
-    private GPSBean gpsBean;//GPS
+    private GPSBean gpsBean=new GPSBean();//GPS
+    private GPSBean googleGps=new GPSBean();//GoogleGPS
     private LightBean lightBean = new LightBean();//光线
     private AccelerationBean accelerationBean = new AccelerationBean();//加速度
     private JSONArray jsonArray = new JSONArray();
@@ -144,6 +148,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private boolean isRecord;//是否在采集中
     private boolean isOpen = false;//抽屉是否在打开状态
     private List<Integer>data;
+    private long mCurrentTime;
+    private int writeFlag=0;
 
     @SuppressLint("HandlerLeak")
     @Override
@@ -164,8 +170,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     case 1:
                         try {
                             if (isExists) {
-                                file = makeFilePath(filePath, "/" + System.currentTimeMillis() + ".json");
-                                writeTxtToFile(dealBean());
+                                dealBean();
                             }
                         } catch (JSONException e) {
                             e.printStackTrace();
@@ -192,7 +197,13 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 }
             }
         };
-
+        if (null != mSensorManager) {
+            mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+            mSensorManager.registerListener(sensorEventListener, mAccelerometer, SensorManager.SENSOR_DELAY_UI);
+            mLightSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
+            mSensorManager.registerListener(sensorEventListener, mLightSensor, SensorManager.SENSOR_DELAY_UI);
+        }
+        updateAaccTimer();
     }
 
     /**
@@ -238,7 +249,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             return;
         }
         Location location = lm.getLastKnownLocation(bestProvider);
-        updateView(location);
+        updateView(location,false);
         // 监听状态
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
@@ -261,6 +272,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         // 1秒更新一次，或最小位移变化超过1米更新一次；
         // 注意：此处更新准确度非常低，推荐在service里面启动一个Thread，在run中sleep(10000);然后执行handler.sendMessage(),更新位置
         lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, locationListener);
+
     }
 
     /**
@@ -364,7 +376,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
      * installed Google Play services and returned to the app.
      */
     @Override
-    public void onMapReady(GoogleMap googleMap) {
+    public void onMapReady(final GoogleMap googleMap) {
         mMap = googleMap;
         mMap.setOnMyLocationButtonClickListener(this);
         mMap.setOnMyLocationClickListener(this);
@@ -378,6 +390,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(lat, lng), 15f));
         }
         updateTraffic();
+        mMap.setOnMyLocationChangeListener(new GoogleMap.OnMyLocationChangeListener() {
+            @Override
+            public void onMyLocationChange(Location location) {
+                updateView(location,true);
+            }
+        });
 
     }
 
@@ -572,7 +590,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
          * 位置信息变化时触发
          */
         public void onLocationChanged(Location location) {
-            updateView(location);
+            updateView(location,false);
             Log.i(TAG, "时间：" + location.getTime());
             Log.i(TAG, "经度：" + location.getLongitude());
             Log.i(TAG, "纬度：" + location.getLatitude());
@@ -616,14 +634,14 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 return;
             }
             Location location = lm.getLastKnownLocation(provider);
-            updateView(location);
+            updateView(location,false);
         }
 
         /**
          * GPS禁用时触发
          */
         public void onProviderDisabled(String provider) {
-            updateView(null);
+            updateView(null,false);
         }
 
     };
@@ -683,61 +701,120 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
      *
      * @param location
      */
-    private void updateView(Location location) {
+    private void updateView(Location location,boolean isGoogle) {
         if (location != null) {
             lat = location.getLatitude();
             lng = location.getLongitude();
-            gpsBean = new GPSBean(String.valueOf(location.getLongitude()),
-                    String.valueOf(location.getLatitude()),
-                    String.valueOf(location.getAltitude()),
-                    String.valueOf(location.getSpeed()),
-                    String.valueOf(location.getBearing()));
-            tvGpsLat.setText("Longitude: " + location.getLatitude());
-            tvGpsLng.setText("Latitude: " + location.getLongitude());
-            tvGpsAlt.setText("Altitude: " + location.getAltitude());
-            tvGpsSpeed.setText("Speed: " + location.getSpeed());
-            tvGpsBearing.setText("Bearing: " + location.getBearing());
-        }
-    }
+            if(!isGoogle){
+                //手机自带GPS信息
+                gpsBean.setLongitude(location.getLongitude());
+                gpsBean.setLatitude(location.getLatitude());
+                gpsBean.setAltitude(location.getAltitude());
+                gpsBean.setBearing(location.getBearing());
+                gpsBean.setSpeed(location.getSpeed());
+            }else{
+                //GoogleGPS
+                googleGps.setLongitude(location.getLongitude());
+                googleGps.setLatitude(location.getLatitude());
+                googleGps.setAltitude(location.getAltitude());
+                googleGps.setBearing(location.getBearing());
+                googleGps.setSpeed(location.getSpeed());
+            }
+            if(gpsBean.getLongitude()!=0&&gpsBean.getLatitude()!=0){
+                tvGpsLat.setText("Latitude: " + gpsBean.getLatitude());
+                tvGpsLng.setText("Longitude: " + gpsBean.getLongitude());
+                tvGpsAlt.setText("Altitude: " + gpsBean.getAltitude());
+                tvGpsSpeed.setText("Speed: " + gpsBean.getSpeed());
+                tvGpsBearing.setText("Heading: " + gpsBean.getBearing());
+            }else{
+                tvGpsLat.setText("Latitude: " + googleGps.getLatitude());
+                tvGpsLng.setText("Longitude: " + googleGps.getLongitude());
+                tvGpsAlt.setText("Altitude: " + googleGps.getAltitude());
+                tvGpsSpeed.setText("Speed: " + googleGps.getSpeed());
+                tvGpsBearing.setText("Heading: " + googleGps.getBearing());
+            }
 
+
+        }
+
+    }
 
     // 将字符串写入到文本文件中
     public void writeTxtToFile(JSONArray array) {
-
-        String strContent = array + "";
-        RandomAccessFile raf = null;
-        try {
-            raf = new RandomAccessFile(file, "rwd");
-            raf.seek(file.length());
-            raf.write(strContent.getBytes());
-            raf.close();
-        } catch (Exception e) {
-            e.printStackTrace();
+        String strContent="No data has been taken for the time being";
+        if(isRecord){
+            if(jsonArray.length()>=2000){
+                writeFlag++;
+            }else{
+                writeFlag=0;
+            }
         }
+        if(writeFlag>0){
+            file = makeFilePath(filePath, "/" + ms2Date(mCurrentTime) +"-"+writeFlag+ ".json");
+        }else{
+            file = makeFilePath(filePath, "/" + ms2Date(mCurrentTime) + ".json");
+        }
+            try {
+                if (array.length()>0) {
+                    strContent= array + "";
+                }
+                RandomAccessFile raf = null;
+                raf = new RandomAccessFile(file, "rwd");
+                raf.seek(file.length());
+                raf.write(strContent.getBytes());
+                raf.close();
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        jsonArray=new JSONArray();
+
 
     }
+
+    /**
+     * 转换时间格式
+     * @param _ms
+     * @return
+     */
+    public static String ms2Date(long _ms){
+        Date date = new Date(_ms);
+        SimpleDateFormat format = new SimpleDateFormat("yyyyMMddHHmmss");
+        return format.format(date);
+    }
+
 
     private JSONArray dealBean() throws JSONException {
 
         JSONObject jsonObject = new JSONObject();
         try {
-            jsonObject.put("time", System.currentTimeMillis());
+            jsonObject.put("time", DateUtil.getDateTimeFromMillis(System.currentTimeMillis()));
             JSONObject object_acc = new JSONObject();
             object_acc.put("accx", accelerationBean.getX());
             object_acc.put("accy", accelerationBean.getY());
             object_acc.put("accz", accelerationBean.getZ());
             jsonObject.put("acc", object_acc);
             JSONObject object_gps = new JSONObject();
-            object_gps.put("longitude", gpsBean.getLongitude());
+            object_gps.put("longitude",gpsBean.getLongitude());
             object_gps.put("latitude", gpsBean.getLatitude());
             object_gps.put("altitude", gpsBean.getAltitude());
             object_gps.put("speed", gpsBean.getSpeed());
             object_gps.put("bearing", gpsBean.getBearing());
             jsonObject.put("gps", object_gps);
+            JSONObject object_google=new JSONObject();
+            object_google.put("longitude",googleGps.getLongitude());
+            object_google.put("latitude",googleGps.getLatitude());
+            object_google.put("altitude",googleGps.getAltitude());
+            object_google.put("speed",googleGps.getSpeed());
+            object_google.put("bearing",googleGps.getBearing());
+            jsonObject.put("googleGPS",object_google);
             JSONObject object_light = new JSONObject();
             object_light.put("lightx", lightBean.getX());
             jsonObject.put("light", object_light);
             jsonArray.put(jsonObject);
+            if(jsonArray.length()>2000){
+                writeTxtToFile(jsonArray);
+            }
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -810,6 +887,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             timer_acc.cancel();
             task_acc.cancel();
         }
+        writeFlag=0;
+        if(jsonArray.length()>0){
+            writeTxtToFile(jsonArray);
+        }
+        handler.removeCallbacksAndMessages(null);
         stopGetData();
     }
 
@@ -844,29 +926,28 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         switch (view.getId()) {
             case R.id.tv_record:
                 if (!isRecord) {
-                    Toast.makeText(MapsActivity.this, "Start getting data", Toast.LENGTH_SHORT).show();
-                    //获取数据
-                    updateTimer();
-                    updateAaccTimer();
-                    if (null != mSensorManager) {
-                        mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-                        mSensorManager.registerListener(sensorEventListener, mAccelerometer, SensorManager.SENSOR_DELAY_UI);
-                        mLightSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
-                        mSensorManager.registerListener(sensorEventListener, mLightSensor, SensorManager.SENSOR_DELAY_UI);
+                    if(gpsBean.getLongitude()==0&&gpsBean.getLatitude()==0
+                            &&googleGps.getLongitude()==0&&googleGps.getLatitude()==0){
+                        Toast.makeText(MapsActivity.this,"If you have no access to your location information, open your cell phone GPS",Toast.LENGTH_SHORT).show();
+                    }else {
+                        jsonArray = new JSONArray();
+                        mCurrentTime = System.currentTimeMillis();
+                        Toast.makeText(MapsActivity.this, "Start recording data", Toast.LENGTH_SHORT).show();
+                        //获取数据
+                        updateTimer();
+                        tvRecord.setText("Stop");
+                        tvRecord.setTextColor(Color.RED);
+                        isRecord = true;
                     }
-                    tvRecord.setText("Stop");
-                    tvRecord.setTextColor(Color.RED);
-                    isRecord = true;
                 } else {
                     if (timer != null && task != null) {
                         timer.cancel();
                         task.cancel();
                     }
-                    if (timer_acc != null && task_acc != null) {
-                        timer_acc.cancel();
-                        task_acc.cancel();
+                    writeFlag=0;
+                    if(jsonArray.length()>0){
+                        writeTxtToFile(jsonArray);
                     }
-                    stopGetData();
                     tvRecord.setText("Record");
                     tvRecord.setTextColor(getResources().getColor(R.color.ori_textcolor));
                     isRecord = false;
