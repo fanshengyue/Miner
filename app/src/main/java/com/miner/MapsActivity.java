@@ -58,6 +58,7 @@ import com.miner.bean.LightBean;
 import com.miner.listener.OnSocketStateListener;
 import com.miner.socket.SocketClient;
 import com.miner.utils.DateUtil;
+import com.miner.utils.NetworkUtils;
 import com.miner.utils.PermissionUtils;
 
 import org.json.JSONArray;
@@ -178,11 +179,17 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
-        mapFragment.getMapAsync(this);
-        initAll();
+
+        if (NetworkUtils.isNetworkAvailable(MapsActivity.this)) {
+            // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+            SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+                    .findFragmentById(R.id.map);
+            mapFragment.getMapAsync(this);
+            initAll();
+
+        }else {
+            Toast.makeText(this, "Please connect to the network", Toast.LENGTH_SHORT).show();
+        }
         handler = new Handler() {
             @Override
             public void handleMessage(Message msg) {
@@ -1039,7 +1046,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 break;
             case R.id.tv_command:
                 switchDrawlayout();
-                cmddialog("0x01:");
+//                cmddialog("0x01:");
+                openCamera();
                 break;
             case R.id.tv_command2:
                 switchDrawlayout();
@@ -1061,6 +1069,17 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             default:
                 break;
         }
+    }
+
+    private void openCamera() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                if (socketClient!=null){
+                    socketClient.sendMsg("0x01");
+                }
+            }
+        }).start();
     }
 
     private void cmddialog(final String cmd) {
