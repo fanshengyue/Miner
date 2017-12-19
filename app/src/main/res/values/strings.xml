@@ -8,4 +8,7 @@
     <string name="permission_required_toast">Location permission is required for this demo.</string>
     
     <string name="frequency">Frequency</string>
+    <string name="ipset">HostConfiguration</string>
+    <string name="command">SendCommand1</string>
+    <string name="command2">SendCommand2</string>
 </resources>
