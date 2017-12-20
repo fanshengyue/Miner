@@ -242,6 +242,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
      * 初始化方法
      */
     private void initAll() {
+        socketstate.setText("");
         conn();
         initData();
         initListener();
