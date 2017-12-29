@@ -20,6 +20,7 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.location.LocationProvider;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -30,6 +31,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
+import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.Gravity;
@@ -168,11 +170,14 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private long mCurrentTime;
     private int writeFlag = 0;
 
-    private String host = "192.168.0.110";
-    private int port = 50000;
+    private String host = "192.168.0.115";
+    private int port = 7777;
     private SocketClient socketClient;
     private Socket client;
-
+    //手机型号
+    private String systemModel;
+    private String Tag = "MapsActivity";
+    private String deviceID;
     @SuppressLint("HandlerLeak")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -187,7 +192,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             mapFragment.getMapAsync(this);
             initAll();
 
-        }else {
+        } else {
             Toast.makeText(this, "Please connect to the network", Toast.LENGTH_SHORT).show();
         }
         handler = new Handler() {
@@ -242,11 +247,20 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
      * 初始化方法
      */
     private void initAll() {
+        // 获取手机型号
+        systemModel = Build.MODEL;
         socketstate.setText("");
         conn();
         initData();
         initListener();
         setWriteReadPermission();
+        initGpsAndSensor();
+
+    }
+
+    private void initGpsAndSensor() {
+        TelephonyManager telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+        deviceID=telephonyManager.getDeviceId();
         lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         isExists = Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED);
         if (isExists) {
@@ -306,7 +320,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         // 1秒更新一次，或最小位移变化超过1米更新一次；
         // 注意：此处更新准确度非常低，推荐在service里面启动一个Thread，在run中sleep(10000);然后执行handler.sendMessage(),更新位置
         lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, locationListener);
-
     }
 
     private void conn() {
@@ -322,7 +335,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     OnSocketStateListener onSocketStateListener = new OnSocketStateListener() {
         @Override
         public void socketstate(final String state) {
-            Log.e("TAG", "socketstate: " + state);
+            Log.e(TAG, "socketstate: " + state);
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -881,7 +894,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 @Override
                 public void run() {
                     if (socketClient != null && client != null && !client.isClosed() && client.isConnected()) {
-                        socketClient.sendMsg(String.valueOf(jsonArray));
+                        String status = socketClient.sendMsg(String.valueOf(jsonArray));
+                        Log.e(TAG, "data:" + status);
                     }
                 }
             }).start();
@@ -965,6 +979,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (jsonArray.length() > 0) {
             writeTxtToFile(jsonArray);
         }
+
+        if (socketClient!=null){
+            socketClient.closeSocket();
+        }
         handler.removeCallbacksAndMessages(null);
         stopGetData();
     }
@@ -1000,6 +1018,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         switch (view.getId()) {
             case R.id.tv_record:
                 if (!isRecord) {
+                    openCamera();
                     if (gpsBean.getLongitude() == 0 && gpsBean.getLatitude() == 0
                             && googleGps.getLongitude() == 0 && googleGps.getLatitude() == 0) {
                         Toast.makeText(MapsActivity.this, "If you have no access to your location information, open your cell phone GPS", Toast.LENGTH_SHORT).show();
@@ -1014,6 +1033,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         isRecord = true;
                     }
                 } else {
+                    closeCamera();
                     if (timer != null && task != null) {
                         timer.cancel();
                         task.cancel();
@@ -1047,7 +1067,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 break;
             case R.id.tv_command:
                 switchDrawlayout();
-//                cmddialog("0x01:");
+                //                cmddialog("0x01:");
                 openCamera();
                 break;
             case R.id.tv_command2:
@@ -1076,8 +1096,20 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         new Thread(new Runnable() {
             @Override
             public void run() {
-                if (socketClient!=null){
-                    socketClient.sendMsg("0x01");
+                if (socketClient != null) {
+                    String status = socketClient.sendMsg("0x01");
+                    Log.e(TAG, "openCamera:" + status);
+                }
+            }
+        }).start();
+    }
+    private void closeCamera() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                if (socketClient != null) {
+                    String status = socketClient.sendMsg("0x03");
+                    Log.e(TAG, "openCamera:" + status);
                 }
             }
         }).start();
@@ -1100,7 +1132,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         @Override
                         public void run() {
                             if (socketClient != null) {
-                                socketClient.sendMsg(scommand);
+                                String status = socketClient.sendMsg(scommand);
+                                Log.e(TAG, "commond:" + status);
                             }
                         }
                     }).start();
