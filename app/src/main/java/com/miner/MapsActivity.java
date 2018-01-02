@@ -172,7 +172,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private long mCurrentTime;
     private int writeFlag = 0;
 
-    private String host = "192.168.0.115";
+    private String host = "192.168.0.118";
     private int port = 7777;
     private SocketClient socketClient;
 //    private Socket client;
@@ -252,11 +252,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         // 获取手机型号
         systemModel = Build.MODEL;
         socketstate.setText("");
-        conn();
         initData();
         initListener();
         setWriteReadPermission();
         initGpsAndSensor();
+        conn();
+
 
     }
 
@@ -327,7 +328,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void conn() {
-        socketClient = new SocketClient(host, port, onSocketStateListener);
+        socketClient = new SocketClient(host, port, filePath,onSocketStateListener);
 //        client = socketClient.getClient();
     }
 
@@ -884,16 +885,18 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             object_google.put("altitude", googleGps.getAltitude());
             object_google.put("speed", googleGps.getSpeed());
             object_google.put("bearing", googleGps.getBearing());
-            jsonObject.put("googleGPS", object_google);
+//            jsonObject.put("googleGPS", object_google);
             JSONObject object_light = new JSONObject();
             object_light.put("lightx", lightBean.getX());
             jsonObject.put("light", object_light);
+            jsonObject.put("deviceID",deviceID);
+            jsonObject.put("frequency",frequency);
             jsonArray.put(jsonObject);
             socketClient.sendOrder(String.valueOf(jsonArray));
 
-            if (jsonArray.length() > 2000) {
-                writeTxtToFile(jsonArray);
-            }
+//            if (jsonArray.length() > 2000) {
+//                writeTxtToFile(jsonArray);
+//            }
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -967,9 +970,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             task_acc.cancel();
         }
         writeFlag = 0;
-        if (jsonArray.length() > 0) {
-            writeTxtToFile(jsonArray);
-        }
+//        if (jsonArray.length() > 0) {
+//            writeTxtToFile(jsonArray);
+//        }
 
         if (socketClient!=null){
             socketClient.onDestroy();
@@ -1030,9 +1033,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         task.cancel();
                     }
                     writeFlag = 0;
-                    if (jsonArray.length() > 0) {
-                        writeTxtToFile(jsonArray);
-                    }
+//                    if (jsonArray.length() > 0) {
+//                        writeTxtToFile(jsonArray);
+//                    }
                     tvRecord.setText("Record");
                     tvRecord.setTextColor(getResources().getColor(R.color.ori_textcolor));
                     isRecord = false;
@@ -1058,8 +1061,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 break;
             case R.id.tv_command:
                 switchDrawlayout();
-                //                cmddialog("0x01:");
-                openCamera();
+                getLog();
                 break;
             case R.id.tv_command2:
                 switchDrawlayout();
@@ -1081,6 +1083,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             default:
                 break;
         }
+    }
+
+    private void getLog() {
+        socketClient.sendOrder("0x04");
     }
 
     private void openCamera() {
