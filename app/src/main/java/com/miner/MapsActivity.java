@@ -175,11 +175,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private String host = "192.168.0.118";
     private int port = 7777;
     private SocketClient socketClient;
-//    private Socket client;
     //手机型号
     private String systemModel;
-    private String Tag = "MapsActivity";
     private String deviceID;
+
     @SuppressLint("HandlerLeak")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -257,15 +256,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         setWriteReadPermission();
         initGpsAndSensor();
         conn();
-
-
     }
-
 
 
     private void initGpsAndSensor() {
         TelephonyManager telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
-        deviceID=telephonyManager.getDeviceId();
+        deviceID = telephonyManager.getDeviceId();
         lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         isExists = Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED);
         if (isExists) {
@@ -328,8 +324,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void conn() {
-        socketClient = new SocketClient(host, port, filePath,onSocketStateListener);
-//        client = socketClient.getClient();
+        socketClient = new SocketClient(host, port, filePath, onSocketStateListener);
+        //        client = socketClient.getClient();
     }
 
     OnSocketStateListener onSocketStateListener = new OnSocketStateListener() {
@@ -867,36 +863,22 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         JSONObject jsonObject = new JSONObject();
         try {
             jsonObject.put("time", DateUtil.getDateTimeFromMillis(System.currentTimeMillis()));
-            JSONObject object_acc = new JSONObject();
-            object_acc.put("accx", accelerationBean.getX());
-            object_acc.put("accy", accelerationBean.getY());
-            object_acc.put("accz", accelerationBean.getZ());
-            jsonObject.put("acc", object_acc);
-            JSONObject object_gps = new JSONObject();
-            object_gps.put("longitude", gpsBean.getLongitude());
-            object_gps.put("latitude", gpsBean.getLatitude());
-            object_gps.put("altitude", gpsBean.getAltitude());
-            object_gps.put("speed", gpsBean.getSpeed());
-            object_gps.put("bearing", gpsBean.getBearing());
-            jsonObject.put("gps", object_gps);
-            JSONObject object_google = new JSONObject();
-            object_google.put("longitude", googleGps.getLongitude());
-            object_google.put("latitude", googleGps.getLatitude());
-            object_google.put("altitude", googleGps.getAltitude());
-            object_google.put("speed", googleGps.getSpeed());
-            object_google.put("bearing", googleGps.getBearing());
-//            jsonObject.put("googleGPS", object_google);
-            JSONObject object_light = new JSONObject();
-            object_light.put("lightx", lightBean.getX());
-            jsonObject.put("light", object_light);
-            jsonObject.put("deviceID",deviceID);
-            jsonObject.put("frequency",frequency);
-            jsonArray.put(jsonObject);
-            socketClient.sendOrder(String.valueOf(jsonArray));
+            jsonObject.put("accx", accelerationBean.getX());
+            jsonObject.put("accy", accelerationBean.getY());
+            jsonObject.put("accz", accelerationBean.getZ());
+            jsonObject.put("longitude", gpsBean.getLongitude());
+            jsonObject.put("latitude", gpsBean.getLatitude());
+            jsonObject.put("altitude", gpsBean.getAltitude());
+            jsonObject.put("speed", gpsBean.getSpeed());
+            jsonObject.put("bearing", gpsBean.getBearing());
+            jsonObject.put("lightx", lightBean.getX());
+            jsonObject.put("deviceID", deviceID);
+            jsonObject.put("frequency", frequency);
+            socketClient.sendOrder(String.valueOf(jsonObject));
 
-//            if (jsonArray.length() > 2000) {
-//                writeTxtToFile(jsonArray);
-//            }
+            //            if (jsonArray.length() > 2000) {
+            //                writeTxtToFile(jsonArray);
+            //            }
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -970,11 +952,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             task_acc.cancel();
         }
         writeFlag = 0;
-//        if (jsonArray.length() > 0) {
-//            writeTxtToFile(jsonArray);
-//        }
+        //        if (jsonArray.length() > 0) {
+        //            writeTxtToFile(jsonArray);
+        //        }
 
-        if (socketClient!=null){
+        if (socketClient != null) {
             socketClient.onDestroy();
         }
         handler.removeCallbacksAndMessages(null);
@@ -1033,9 +1015,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         task.cancel();
                     }
                     writeFlag = 0;
-//                    if (jsonArray.length() > 0) {
-//                        writeTxtToFile(jsonArray);
-//                    }
+                    //                    if (jsonArray.length() > 0) {
+                    //                        writeTxtToFile(jsonArray);
+                    //                    }
                     tvRecord.setText("Record");
                     tvRecord.setTextColor(getResources().getColor(R.color.ori_textcolor));
                     isRecord = false;
@@ -1092,6 +1074,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private void openCamera() {
         socketClient.sendOrder("0x01");
     }
+
     private void closeCamera() {
         socketClient.sendOrder("0x03");
     }
@@ -1110,7 +1093,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 final String scommand = cmd + etcommand.getText().toString();
                 if (!TextUtils.isEmpty(scommand)) {
                     socketClient.sendOrder(scommand);
-
                     alertDialog.dismiss();
                 }
             }
@@ -1124,6 +1106,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         builder.setCancelable(false);
         final EditText ethost = view.findViewById(R.id.host);
         final EditText etport = view.findViewById(R.id.port);
+        ethost.setText(host);
+        etport.setText(port + "");
         TextView cancle = view.findViewById(R.id.cancel);
         TextView confirm = view.findViewById(R.id.confirm);
         final AlertDialog alertDialog = builder.create();
@@ -1142,10 +1126,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 if (!TextUtils.isEmpty(shost) && !TextUtils.isEmpty(sport)) {
                     host = shost;
                     port = Integer.valueOf(sport);
-                    if (socketClient != null) {
-                        socketClient.onDestroy();
-                    }
-                    conn();
+                    reConnect();
                     alertDialog.dismiss();
                 } else {
                     Toast.makeText(MapsActivity.this, "Please fill in the information", Toast.LENGTH_SHORT).show();
@@ -1153,6 +1134,13 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         });
 
+    }
+
+    private void reConnect() {
+        if (socketClient != null) {
+            socketClient.onDestroy();
+            conn();
+        }
     }
 
 }

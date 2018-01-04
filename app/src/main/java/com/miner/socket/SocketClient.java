@@ -2,25 +2,25 @@ package com.miner.socket;
 
 
 import android.util.Log;
-import android.util.Xml;
 
 import com.miner.listener.OnSocketStateListener;
+import com.miner.utils.DateUtil;
 
-import java.io.BufferedReader;
+
 import java.io.BufferedWriter;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.util.Base64;
-import java.util.Timer;
-import java.util.TimerTask;
+
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
 
 /**
  * Created by Mr.Zhang on 2017/12/18.
@@ -33,11 +33,8 @@ public class SocketClient {
     private String TAG = "SocketClient";
     /*连接线程*/
     private Thread connectThread;
-    private Timer timer = new Timer();
     private OutputStream outputStream;
-
     private String host;
-    private TimerTask task;
     /*默认重连*/
     private boolean isReConnect = true;
     private InputStream inputStream;
@@ -45,6 +42,7 @@ public class SocketClient {
     private int reconnect = 0;
     private String savePath;
     private FileOutputStream fout;
+    private ScheduledExecutorService executor;
 
 
     public SocketClient(String shost, int sport, String savePath, OnSocketStateListener listener) {
@@ -65,12 +63,10 @@ public class SocketClient {
             connectThread = new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    client = new Socket();
-                    //设置连接超时
                     try {
-                        client.connect(new InetSocketAddress(host, port), 5000);
-                        if (client.isConnected()) {
-                           /*发送心跳数据*/
+                        client = new Socket(host, port);
+                        if (client.isConnected() && !client.isClosed()) {
+                            /*发送心跳数据*/
                             sendBeatData();
                             //                            receiveData();
                             listener.socketstate("Connected");
@@ -78,7 +74,6 @@ public class SocketClient {
                     } catch (IOException e) {
                         e.printStackTrace();
                         listener.socketstate("Disconnected");
-                        releaseSocket();
                     }
                 }
             });
@@ -88,41 +83,41 @@ public class SocketClient {
     }
 
     private void sendBeatData() {
-        if (timer == null) {
-            timer = new Timer();
-        }
-
-        if (task == null) {
-            task = new TimerTask() {
-                @Override
-                public void run() {
-                    try {
-                        outputStream = client.getOutputStream();
-                        bufferedWriter = new BufferedWriter(new OutputStreamWriter(outputStream));
-                        bufferedWriter.write("");
-                        bufferedWriter.flush();
-                        Log.e(TAG, "run: " + 2);
-                    } catch (Exception e) {
-                        Log.e(TAG, "run: " + 3);
-                        /*发送失败说明socket断开了或者出现了其他错误*/
-                        listener.socketstate("Disconnected");
-                        /*重连*/
-                        releaseSocket();
-                        reconnect++;
-                        e.printStackTrace();
-
-
-                    }
-                }
-            };
-        }
-
-        timer.schedule(task, 0, waiting() * 1000);
+        //定时器
+        executor = Executors.newScheduledThreadPool(1);
+        executor.scheduleAtFixedRate(
+                new EchoServer(),
+                0,
+                waiting(),
+                TimeUnit.SECONDS);
     }
 
-    private int waiting() {
+    class EchoServer implements Runnable {
+        @Override
+        public void run() {
+            try {
+                outputStream = client.getOutputStream();
+                bufferedWriter = new BufferedWriter(new OutputStreamWriter(outputStream));
+                bufferedWriter.write("test");
+                bufferedWriter.flush();
+            } catch (Exception e) {
+                e.printStackTrace();
+                        /*发送失败说明socket断开了或者出现了其他错误*/
+                listener.socketstate("Disconnected");
+                Log.e(TAG, "sendBeatData:" + e.toString());
+                /*重连*/
+                reConn();
+
+            }
+        }
+    }
+
+    private long waiting() {
         if (reconnect > 20) {
             return 600;
+        }
+        if (reconnect > 30) {
+            onDestroy();
         }
 
         return reconnect <= 7 ? 2 : 10;
@@ -143,7 +138,6 @@ public class SocketClient {
                             bufferedWriter.flush();
                             receiveData();
                             listener.socketstate("Transmission Completion");
-
                         }
 
                     } catch (IOException e) {
@@ -155,8 +149,6 @@ public class SocketClient {
 
         } else {
             listener.socketstate("Disconnected");
-            releaseSocket();
-            reconnect++;
         }
     }
 
@@ -170,7 +162,8 @@ public class SocketClient {
                 public void run() {
                     try {
                         inputStream = client.getInputStream();
-                        File file = new File(savePath + "/test.log");
+                        String dateTime= DateUtil.getDateTimeFromMillis(System.currentTimeMillis());
+                        File file = new File(savePath + "/"+dateTime+".log");
                         fout = new FileOutputStream(file);
                         int len = 0;
                         if (inputStream != null) {
@@ -190,29 +183,32 @@ public class SocketClient {
 
                     } catch (IOException e) {
                         e.printStackTrace();
+                        listener.socketstate("Disconnected");
                     }
                 }
             }).start();
 
         } else {
             listener.socketstate("Disconnected");
+        }
+    }
+
+    private void reConn() {
+        try {
+            Thread.sleep(5000);
             releaseSocket();
+            reconnect++;
+        } catch (InterruptedException e1) {
+            e1.printStackTrace();
         }
     }
 
     /*释放资源*/
     private void releaseSocket() {
-
-        if (task != null) {
-            task.cancel();
-            task = null;
+        if (executor != null) {
+            executor.shutdownNow();
+            executor = null;
         }
-        if (timer != null) {
-            timer.purge();
-            timer.cancel();
-            timer = null;
-        }
-
         if (outputStream != null) {
             try {
                 outputStream.close();
@@ -250,62 +246,4 @@ public class SocketClient {
         }
 
     }
-
-    //    /**
-    //     * 服务器是否关闭，通过发送一个socket信息
-    //     *
-    //     * @return
-    //     */
-    //    public boolean canConnectToServer() {
-    //        try {
-    //            if (client != null) {
-    //                client.sendUrgentData(0xff);
-    //            }
-    //        } catch (IOException e) {
-    //            // TODO Auto-generated catch block
-    //            e.printStackTrace();
-    //            return false;
-    //        } catch (Exception e) {
-    //            e.printStackTrace();
-    //            return false;
-    //        }
-    //        return true;
-    //    }
-
-    //    public Socket getClient() {
-    //        return client;
-    //    }
-
-    //    public String sendMsg(String msg) {
-    //            try {
-    //                message = msg;
-    //                //System.out.println(msg);
-    //                listener.socketstate("Transmission");
-    //                BufferedReader in = new BufferedReader(new InputStreamReader(client.getInputStream()));
-    //                PrintWriter out = new PrintWriter(client.getOutputStream());
-    //                out.println(msg);
-    //                out.flush();
-    //                listener.socketstate("Transmission Completion");
-    //                return in.readLine();
-    //            } catch (IOException e) {
-    //                e.printStackTrace();
-    //                listener.socketstate("Transmission abnormal" + e.toString());
-    //                //            conn();
-    //                sendMsg(message);
-    //                Log.e(TAG, "sendMsg: " + message);
-    //            }
-    //            return "";
-    //        }
-
-
-    //    public void closeSocket() {
-    //        try {
-    //            listener.socketstate("Socket is closed");
-    //            client.close();
-    //            client = null;
-    //        } catch (IOException e) {
-    //            e.printStackTrace();
-    //        }
-    //    }
-
 }

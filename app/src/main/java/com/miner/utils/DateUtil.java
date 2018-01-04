@@ -12,7 +12,7 @@ import java.util.Date;
 
 public class DateUtil {
     /** yyyy-MM-dd HH:mm:ss字符串 */
-    public static final String DEFAULT_DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss";
+    public static final String DEFAULT_DATE_TIME_FORMAT = "yyyyMMddHHmmss";
 
     /** yyyy-MM-dd字符串 */
     public static final String DEFAULT_FORMAT_DATE = "yyyy-MM-dd";
