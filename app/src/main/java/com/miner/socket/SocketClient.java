@@ -68,7 +68,6 @@ public class SocketClient {
                         if (client.isConnected() && !client.isClosed()) {
                             /*发送心跳数据*/
                             sendBeatData();
-                            //                            receiveData();
                             listener.socketstate("Connected");
                         }else {
                             client.close();
@@ -170,7 +169,6 @@ public class SocketClient {
                         fout = new FileOutputStream(file);
                         int len = 0;
                         if (inputStream != null) {
-                            //                            bufferedReader=new BufferedReader(new InputStreamReader(inputStream));
                             // 客户端接收服务器端的响应，读取服务器端向客户端的输入流
                             // 缓冲区
                             while (true) {

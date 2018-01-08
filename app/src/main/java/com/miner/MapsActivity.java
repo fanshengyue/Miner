@@ -308,13 +308,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         updateView(location, false);
         // 监听状态
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
             return;
         }
         lm.addGpsStatusListener(gpsListener);
@@ -708,13 +701,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             if (ActivityCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_FINE_LOCATION)
                     != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION)
                     != PackageManager.PERMISSION_GRANTED) {
-                // TODO: Consider calling
-                //    ActivityCompat#requestPermissions
-                // here to request the missing permissions, and then overriding
-                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                //                                          int[] grantResults)
-                // to handle the case where the user grants the permission. See the documentation
-                // for ActivityCompat#requestPermissions for more details.
                 return;
             }
             Location location = lm.getLastKnownLocation(provider);
@@ -744,13 +730,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     // 获取当前状态
                     if (ActivityCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_FINE_LOCATION)
                             != PackageManager.PERMISSION_GRANTED) {
-                        // TODO: Consider calling
-                        //    ActivityCompat#requestPermissions
-                        // here to request the missing permissions, and then overriding
-                        //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                        //                                          int[] grantResults)
-                        // to handle the case where the user grants the permission. See the documentation
-                        // for ActivityCompat#requestPermissions for more details.
                         return;
                     }
                     GpsStatus gpsStatus = lm.getGpsStatus(null);
@@ -886,10 +865,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             jsonObject.put("deviceID", deviceID);
             jsonObject.put("frequency", frequency);
             socketClient.sendOrder(String.valueOf(jsonObject));
-
-            //            if (jsonArray.length() > 2000) {
-            //                writeTxtToFile(jsonArray);
-            //            }
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -971,10 +946,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             timer_acc.cancel();
             task_acc.cancel();
         }
-        writeFlag = 0;
-        //        if (jsonArray.length() > 0) {
-        //            writeTxtToFile(jsonArray);
-        //        }
         if (isRecord) {
             socketClient.sendOrder("0x03");
         }
@@ -1036,10 +1007,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         timer.cancel();
                         task.cancel();
                     }
-                    writeFlag = 0;
-                    //                    if (jsonArray.length() > 0) {
-                    //                        writeTxtToFile(jsonArray);
-                    //                    }
                     tvRecord.setText("Record");
                     tvRecord.setTextColor(getResources().getColor(R.color.ori_textcolor));
                     isRecord = false;
