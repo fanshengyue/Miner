@@ -70,6 +70,8 @@ public class SocketClient {
                             sendBeatData();
                             //                            receiveData();
                             listener.socketstate("Connected");
+                        }else {
+                            client.close();
                         }
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -100,6 +102,7 @@ public class SocketClient {
                 bufferedWriter = new BufferedWriter(new OutputStreamWriter(outputStream));
                 bufferedWriter.write("test");
                 bufferedWriter.flush();
+                Log.e(TAG, "run: test" );
             } catch (Exception e) {
                 e.printStackTrace();
                         /*发送失败说明socket断开了或者出现了其他错误*/
@@ -195,9 +198,10 @@ public class SocketClient {
 
     private void reConn() {
         try {
-            Thread.sleep(5000);
+            Thread.sleep(2000);
             releaseSocket();
             reconnect++;
+            Log.e(TAG, "reConn: "+reconnect );
         } catch (InterruptedException e1) {
             e1.printStackTrace();
         }

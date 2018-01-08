@@ -4,10 +4,8 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.ActionBar;
 import android.app.AlertDialog;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
@@ -26,7 +24,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
-import android.os.IBinder;
 import android.os.Message;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
@@ -38,6 +35,7 @@ import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.AdapterView;
@@ -137,6 +135,14 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     TextView socketstate;
     @BindView(R.id.tv_command2)
     TextView tvCommand2;
+    @BindView(R.id.probabilty)
+    TextView probabilty;
+    @BindView(R.id.weight)
+    TextView weight;
+    @BindView(R.id.cameraFrequency)
+    TextView cameraFrequency;
+    @BindView(R.id.config)
+    TextView config;
 
     /**
      * Flag indicating whether a requested permission has been denied after returning in
@@ -172,12 +178,13 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private long mCurrentTime;
     private int writeFlag = 0;
 
-    private String host = "192.168.0.118";
+    private String host = "192.168.0.115";
     private int port = 7777;
     private SocketClient socketClient;
     //手机型号
     private String systemModel;
     private String deviceID;
+    private boolean ishow;//侧边栏修改照相机的频率是否显示
 
     @SuppressLint("HandlerLeak")
     @Override
@@ -403,6 +410,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         tvFrequency.setOnClickListener(this);
         tvCommand.setOnClickListener(this);
         tvCommand2.setOnClickListener(this);
+        config.setOnClickListener(this);
+        probabilty.setOnClickListener(this);
+        weight.setOnClickListener(this);
+        cameraFrequency.setOnClickListener(this);
         TimeListAdapter adapter = new TimeListAdapter(this, data);
         lvFrequency.setAdapter(adapter);
         lvFrequency.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -935,6 +946,15 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if ((keyCode == KeyEvent.KEYCODE_BACK)) {
+            if (isRecord) {
+                socketClient.sendOrder("0x03");
+            }
+        }
+        return super.onKeyDown(keyCode, event);
+    }
 
     @Override
     protected void onDestroy() {
@@ -955,7 +975,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         //        if (jsonArray.length() > 0) {
         //            writeTxtToFile(jsonArray);
         //        }
-
+        if (isRecord) {
+            socketClient.sendOrder("0x03");
+        }
         if (socketClient != null) {
             socketClient.onDestroy();
         }
@@ -1054,6 +1076,31 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 //dialog for ip configuration
                 ipdialog();
                 break;
+            case R.id.config:
+                if (!ishow){
+                   probabilty.setVisibility(View.VISIBLE);
+                   weight.setVisibility(View.VISIBLE);
+                   cameraFrequency.setVisibility(View.VISIBLE);
+                   ishow=true;
+                }else {
+                    probabilty.setVisibility(View.GONE);
+                    weight.setVisibility(View.GONE);
+                    cameraFrequency.setVisibility(View.GONE);
+                    ishow=false;
+                }
+                break;
+            case R.id.probabilty:
+                switchDrawlayout();
+                cmddialog("0x05:PROBABILITY:");
+                break;
+            case R.id.weight:
+                switchDrawlayout();
+                cmddialog("0x05:WEIGHT:");
+                break;
+            case R.id.cameraFrequency:
+                switchDrawlayout();
+                cmddialog("0x05:TimeFrequency:");
+                break;
             case R.id.tv_frequency:
                 //Frequency
                 if (lvFrequency.getVisibility() == View.VISIBLE) {
@@ -1090,8 +1137,14 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         confirm.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                final String scommand = cmd + etcommand.getText().toString();
+                String etstring = etcommand.getText().toString();
+                String scommand = cmd + etstring;
                 if (!TextUtils.isEmpty(scommand)) {
+                    if (cmd.contains("0x05:TimeFrequency:")){
+                        Integer integer = Integer.valueOf(etstring);
+                        int i = (1000 / integer);
+                        scommand = cmd +i;
+                    }
                     socketClient.sendOrder(scommand);
                     alertDialog.dismiss();
                 }
