@@ -9,6 +9,10 @@
     
     <string name="frequency">Frequency</string>
     <string name="ipset">HostConfiguration</string>
-    <string name="command">OpenCamera</string>
+    <string name="command">GetLog</string>
     <string name="command2">SendCommand</string>
+    <string name="Config">Config</string>
+    <string name="probabilty">DetectionProbabilty</string>
+    <string name="weight">Weight</string>
+    <string name="cameraFrequency">CameraFrequency</string>
 </resources>
