@@ -3,6 +3,7 @@ package com.miner;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.ActionBar;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -19,6 +20,7 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.location.LocationProvider;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -29,11 +31,16 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
+import android.telephony.TelephonyManager;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.Gravity;
+import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.CheckBox;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.PopupWindow;
@@ -51,7 +58,10 @@ import com.miner.adapter.TimeListAdapter;
 import com.miner.bean.AccelerationBean;
 import com.miner.bean.GPSBean;
 import com.miner.bean.LightBean;
+import com.miner.listener.OnSocketStateListener;
+import com.miner.socket.SocketClient;
 import com.miner.utils.DateUtil;
+import com.miner.utils.NetworkUtils;
 import com.miner.utils.PermissionUtils;
 
 import org.json.JSONArray;
@@ -113,10 +123,27 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     DrawerLayout dwLayout;
     @BindView(R.id.iv_setting)
     ImageView ivSetting;
+    @BindView(R.id.tv_ip)
+    TextView ipset;
     @BindView(R.id.tv_frequency)
     TextView tvFrequency;
     @BindView(R.id.lv_frequency)
     ListView lvFrequency;
+    @BindView(R.id.tv_command)
+    TextView tvCommand;
+    @BindView(R.id.socketstate)
+    TextView socketstate;
+    @BindView(R.id.tv_command2)
+    TextView tvCommand2;
+    @BindView(R.id.probabilty)
+    TextView probabilty;
+    @BindView(R.id.weight)
+    TextView weight;
+    @BindView(R.id.cameraFrequency)
+    TextView cameraFrequency;
+    @BindView(R.id.config)
+    TextView config;
+
     /**
      * Flag indicating whether a requested permission has been denied after returning in
      * {@link #onRequestPermissionsResult(int, String[], int[])}.
@@ -138,18 +165,26 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private String bestProvider;
     private Sensor mAccelerometer;
     private Sensor mLightSensor;
-    private GPSBean gpsBean=new GPSBean();//GPS
-    private GPSBean googleGps=new GPSBean();//GoogleGPS
+    private GPSBean gpsBean = new GPSBean();//GPS
+    private GPSBean googleGps = new GPSBean();//GoogleGPS
     private LightBean lightBean = new LightBean();//光线
     private AccelerationBean accelerationBean = new AccelerationBean();//加速度
     private JSONArray jsonArray = new JSONArray();
-    private boolean isExists;
+    private boolean isExists;//是否存在sd卡
     private String filePath;
     private boolean isRecord;//是否在采集中
     private boolean isOpen = false;//抽屉是否在打开状态
-    private List<Integer>data;
+    private List<Integer> data;
     private long mCurrentTime;
-    private int writeFlag=0;
+    private int writeFlag = 0;
+
+    private String host = "192.168.0.115";
+    private int port = 7777;
+    private SocketClient socketClient;
+    //手机型号
+    private String systemModel;
+    private String deviceID;
+    private boolean ishow;//侧边栏修改照相机的频率是否显示
 
     @SuppressLint("HandlerLeak")
     @Override
@@ -157,11 +192,17 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
-        mapFragment.getMapAsync(this);
-        initAll();
+
+        if (NetworkUtils.isNetworkAvailable(MapsActivity.this)) {
+            // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+            SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+                    .findFragmentById(R.id.map);
+            mapFragment.getMapAsync(this);
+            initAll();
+
+        } else {
+            Toast.makeText(this, "Please connect to the network", Toast.LENGTH_SHORT).show();
+        }
         handler = new Handler() {
             @Override
             public void handleMessage(Message msg) {
@@ -183,7 +224,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                     //.rotation(45.0f)//将标记旋转45度
                                     //.icon(BitmapDescriptorFactory.defaultMarker()));
                                     .icon(BitmapDescriptorFactory.fromResource(R.drawable.marker)));
-//                            mMap.moveCamera(CameraUpdateFactory.newLatLng(new LatLng(lat, lng)));
+                            //                            mMap.moveCamera(CameraUpdateFactory.newLatLng(new LatLng(lat, lng)));
                         }
                         Log.i("location", ":" + lat + ";" + lng);
                         break;
@@ -191,6 +232,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         tvAccX.setText("AccelerationX：" + accelerationBean.getX());
                         tvAccY.setText("AccelerationY：" + accelerationBean.getY());
                         tvAccZ.setText("AccelerationZ: " + accelerationBean.getZ());
+                        break;
+                    case 3:
+                        String state = (String) msg.obj;
+                        socketstate.setText(state);
                         break;
                     default:
                         break;
@@ -210,9 +255,20 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
      * 初始化方法
      */
     private void initAll() {
+        // 获取手机型号
+        systemModel = Build.MODEL;
+        socketstate.setText("");
         initData();
         initListener();
         setWriteReadPermission();
+        initGpsAndSensor();
+        conn();
+    }
+
+
+    private void initGpsAndSensor() {
+        TelephonyManager telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+        deviceID = telephonyManager.getDeviceId();
         lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         isExists = Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED);
         if (isExists) {
@@ -249,16 +305,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             return;
         }
         Location location = lm.getLastKnownLocation(bestProvider);
-        updateView(location,false);
+        updateView(location, false);
         // 监听状态
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
             return;
         }
         lm.addGpsStatusListener(gpsListener);
@@ -272,13 +321,33 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         // 1秒更新一次，或最小位移变化超过1米更新一次；
         // 注意：此处更新准确度非常低，推荐在service里面启动一个Thread，在run中sleep(10000);然后执行handler.sendMessage(),更新位置
         lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, locationListener);
-
     }
+
+    private void conn() {
+        socketClient = new SocketClient(host, port, filePath, onSocketStateListener);
+        //        client = socketClient.getClient();
+    }
+
+    OnSocketStateListener onSocketStateListener = new OnSocketStateListener() {
+        @Override
+        public void socketstate(final String state) {
+            Log.e(TAG, "socketstate: " + state);
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Message message = new Message();
+                    message.what = 3;
+                    message.obj = state;
+                    handler.sendMessage(message);
+                }
+            });
+        }
+    };
 
     /**
      * 初始化数据
      */
-    private void initData(){
+    private void initData() {
         data = new ArrayList<>();
         data.add(1);
         data.add(5);
@@ -287,6 +356,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         data.add(30);
         data.add(60);
     }
+
     /**
      * 设置下拉列表
      */
@@ -329,7 +399,14 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         tvClearMap.setOnClickListener(this);
         tvPop.setOnClickListener(this);
         ivSetting.setOnClickListener(this);
+        ipset.setOnClickListener(this);
         tvFrequency.setOnClickListener(this);
+        tvCommand.setOnClickListener(this);
+        tvCommand2.setOnClickListener(this);
+        config.setOnClickListener(this);
+        probabilty.setOnClickListener(this);
+        weight.setOnClickListener(this);
+        cameraFrequency.setOnClickListener(this);
         TimeListAdapter adapter = new TimeListAdapter(this, data);
         lvFrequency.setAdapter(adapter);
         lvFrequency.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -393,7 +470,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         mMap.setOnMyLocationChangeListener(new GoogleMap.OnMyLocationChangeListener() {
             @Override
             public void onMyLocationChange(Location location) {
-                updateView(location,true);
+                updateView(location, true);
             }
         });
 
@@ -590,7 +667,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
          * 位置信息变化时触发
          */
         public void onLocationChanged(Location location) {
-            updateView(location,false);
+            updateView(location, false);
             Log.i(TAG, "时间：" + location.getTime());
             Log.i(TAG, "经度：" + location.getLongitude());
             Log.i(TAG, "纬度：" + location.getLatitude());
@@ -624,24 +701,17 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             if (ActivityCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_FINE_LOCATION)
                     != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION)
                     != PackageManager.PERMISSION_GRANTED) {
-                // TODO: Consider calling
-                //    ActivityCompat#requestPermissions
-                // here to request the missing permissions, and then overriding
-                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                //                                          int[] grantResults)
-                // to handle the case where the user grants the permission. See the documentation
-                // for ActivityCompat#requestPermissions for more details.
                 return;
             }
             Location location = lm.getLastKnownLocation(provider);
-            updateView(location,false);
+            updateView(location, false);
         }
 
         /**
          * GPS禁用时触发
          */
         public void onProviderDisabled(String provider) {
-            updateView(null,false);
+            updateView(null, false);
         }
 
     };
@@ -660,13 +730,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     // 获取当前状态
                     if (ActivityCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_FINE_LOCATION)
                             != PackageManager.PERMISSION_GRANTED) {
-                        // TODO: Consider calling
-                        //    ActivityCompat#requestPermissions
-                        // here to request the missing permissions, and then overriding
-                        //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                        //                                          int[] grantResults)
-                        // to handle the case where the user grants the permission. See the documentation
-                        // for ActivityCompat#requestPermissions for more details.
                         return;
                     }
                     GpsStatus gpsStatus = lm.getGpsStatus(null);
@@ -701,18 +764,18 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
      *
      * @param location
      */
-    private void updateView(Location location,boolean isGoogle) {
+    private void updateView(Location location, boolean isGoogle) {
         if (location != null) {
             lat = location.getLatitude();
             lng = location.getLongitude();
-            if(!isGoogle){
+            if (!isGoogle) {
                 //手机自带GPS信息
                 gpsBean.setLongitude(location.getLongitude());
                 gpsBean.setLatitude(location.getLatitude());
                 gpsBean.setAltitude(location.getAltitude());
                 gpsBean.setBearing(location.getBearing());
                 gpsBean.setSpeed(location.getSpeed());
-            }else{
+            } else {
                 //GoogleGPS
                 googleGps.setLongitude(location.getLongitude());
                 googleGps.setLatitude(location.getLatitude());
@@ -720,13 +783,13 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 googleGps.setBearing(location.getBearing());
                 googleGps.setSpeed(location.getSpeed());
             }
-            if(gpsBean.getLongitude()!=0&&gpsBean.getLatitude()!=0){
+            if (gpsBean.getLongitude() != 0 && gpsBean.getLatitude() != 0) {
                 tvGpsLat.setText("Latitude: " + gpsBean.getLatitude());
                 tvGpsLng.setText("Longitude: " + gpsBean.getLongitude());
                 tvGpsAlt.setText("Altitude: " + gpsBean.getAltitude());
                 tvGpsSpeed.setText("Speed: " + gpsBean.getSpeed());
                 tvGpsBearing.setText("Heading: " + gpsBean.getBearing());
-            }else{
+            } else {
                 tvGpsLat.setText("Latitude: " + googleGps.getLatitude());
                 tvGpsLng.setText("Longitude: " + googleGps.getLongitude());
                 tvGpsAlt.setText("Altitude: " + googleGps.getAltitude());
@@ -741,43 +804,44 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     // 将字符串写入到文本文件中
     public void writeTxtToFile(JSONArray array) {
-        String strContent="No data has been taken for the time being";
-        if(isRecord){
-            if(jsonArray.length()>=2000){
+        String strContent = "No data has been taken for the time being";
+        if (isRecord) {
+            if (jsonArray.length() >= 2000) {
                 writeFlag++;
-            }else{
-                writeFlag=0;
+            } else {
+                writeFlag = 0;
             }
         }
-        if(writeFlag>0){
-            file = makeFilePath(filePath, "/" + ms2Date(mCurrentTime) +"-"+writeFlag+ ".json");
-        }else{
+        if (writeFlag > 0) {
+            file = makeFilePath(filePath, "/" + ms2Date(mCurrentTime) + "-" + writeFlag + ".json");
+        } else {
             file = makeFilePath(filePath, "/" + ms2Date(mCurrentTime) + ".json");
         }
-            try {
-                if (array.length()>0) {
-                    strContent= array + "";
-                }
-                RandomAccessFile raf = null;
-                raf = new RandomAccessFile(file, "rwd");
-                raf.seek(file.length());
-                raf.write(strContent.getBytes());
-                raf.close();
-
-            } catch (Exception e) {
-                e.printStackTrace();
+        try {
+            if (array.length() > 0) {
+                strContent = array + "";
             }
-        jsonArray=new JSONArray();
+            RandomAccessFile raf = null;
+            raf = new RandomAccessFile(file, "rwd");
+            raf.seek(file.length());
+            raf.write(strContent.getBytes());
+            raf.close();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        jsonArray = new JSONArray();
 
 
     }
 
     /**
      * 转换时间格式
+     *
      * @param _ms
      * @return
      */
-    public static String ms2Date(long _ms){
+    public static String ms2Date(long _ms) {
         Date date = new Date(_ms);
         SimpleDateFormat format = new SimpleDateFormat("yyyyMMddHHmmss");
         return format.format(date);
@@ -789,32 +853,18 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         JSONObject jsonObject = new JSONObject();
         try {
             jsonObject.put("time", DateUtil.getDateTimeFromMillis(System.currentTimeMillis()));
-            JSONObject object_acc = new JSONObject();
-            object_acc.put("accx", accelerationBean.getX());
-            object_acc.put("accy", accelerationBean.getY());
-            object_acc.put("accz", accelerationBean.getZ());
-            jsonObject.put("acc", object_acc);
-            JSONObject object_gps = new JSONObject();
-            object_gps.put("longitude",gpsBean.getLongitude());
-            object_gps.put("latitude", gpsBean.getLatitude());
-            object_gps.put("altitude", gpsBean.getAltitude());
-            object_gps.put("speed", gpsBean.getSpeed());
-            object_gps.put("bearing", gpsBean.getBearing());
-            jsonObject.put("gps", object_gps);
-            JSONObject object_google=new JSONObject();
-            object_google.put("longitude",googleGps.getLongitude());
-            object_google.put("latitude",googleGps.getLatitude());
-            object_google.put("altitude",googleGps.getAltitude());
-            object_google.put("speed",googleGps.getSpeed());
-            object_google.put("bearing",googleGps.getBearing());
-            jsonObject.put("googleGPS",object_google);
-            JSONObject object_light = new JSONObject();
-            object_light.put("lightx", lightBean.getX());
-            jsonObject.put("light", object_light);
-            jsonArray.put(jsonObject);
-            if(jsonArray.length()>2000){
-                writeTxtToFile(jsonArray);
-            }
+            jsonObject.put("accx", accelerationBean.getX());
+            jsonObject.put("accy", accelerationBean.getY());
+            jsonObject.put("accz", accelerationBean.getZ());
+            jsonObject.put("longitude", gpsBean.getLongitude());
+            jsonObject.put("latitude", gpsBean.getLatitude());
+            jsonObject.put("altitude", gpsBean.getAltitude());
+            jsonObject.put("speed", gpsBean.getSpeed());
+            jsonObject.put("bearing", gpsBean.getBearing());
+            jsonObject.put("lightx", lightBean.getX());
+            jsonObject.put("deviceID", deviceID);
+            jsonObject.put("frequency", frequency);
+            socketClient.sendOrder(String.valueOf(jsonObject));
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -871,6 +921,15 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if ((keyCode == KeyEvent.KEYCODE_BACK)) {
+            if (isRecord) {
+                socketClient.sendOrder("0x03");
+            }
+        }
+        return super.onKeyDown(keyCode, event);
+    }
 
     @Override
     protected void onDestroy() {
@@ -887,9 +946,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             timer_acc.cancel();
             task_acc.cancel();
         }
-        writeFlag=0;
-        if(jsonArray.length()>0){
-            writeTxtToFile(jsonArray);
+        if (isRecord) {
+            socketClient.sendOrder("0x03");
+        }
+        if (socketClient != null) {
+            socketClient.onDestroy();
         }
         handler.removeCallbacksAndMessages(null);
         stopGetData();
@@ -926,10 +987,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         switch (view.getId()) {
             case R.id.tv_record:
                 if (!isRecord) {
-                    if(gpsBean.getLongitude()==0&&gpsBean.getLatitude()==0
-                            &&googleGps.getLongitude()==0&&googleGps.getLatitude()==0){
-                        Toast.makeText(MapsActivity.this,"If you have no access to your location information, open your cell phone GPS",Toast.LENGTH_SHORT).show();
-                    }else {
+                    openCamera();
+                    if (gpsBean.getLongitude() == 0 && gpsBean.getLatitude() == 0
+                            && googleGps.getLongitude() == 0 && googleGps.getLatitude() == 0) {
+                        Toast.makeText(MapsActivity.this, "If you have no access to your location information, open your cell phone GPS", Toast.LENGTH_SHORT).show();
+                    } else {
                         jsonArray = new JSONArray();
                         mCurrentTime = System.currentTimeMillis();
                         Toast.makeText(MapsActivity.this, "Start recording data", Toast.LENGTH_SHORT).show();
@@ -940,13 +1002,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         isRecord = true;
                     }
                 } else {
+                    closeCamera();
                     if (timer != null && task != null) {
                         timer.cancel();
                         task.cancel();
-                    }
-                    writeFlag=0;
-                    if(jsonArray.length()>0){
-                        writeTxtToFile(jsonArray);
                     }
                     tvRecord.setText("Record");
                     tvRecord.setTextColor(getResources().getColor(R.color.ori_textcolor));
@@ -971,11 +1030,49 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 //Open the Drawer
                 switchDrawlayout();
                 break;
+            case R.id.tv_command:
+                switchDrawlayout();
+                getLog();
+                break;
+            case R.id.tv_command2:
+                switchDrawlayout();
+                cmddialog("0x02:");
+                break;
+            case R.id.tv_ip:
+                switchDrawlayout();
+                //dialog for ip configuration
+                ipdialog();
+                break;
+            case R.id.config:
+                if (!ishow){
+                   probabilty.setVisibility(View.VISIBLE);
+                   weight.setVisibility(View.VISIBLE);
+                   cameraFrequency.setVisibility(View.VISIBLE);
+                   ishow=true;
+                }else {
+                    probabilty.setVisibility(View.GONE);
+                    weight.setVisibility(View.GONE);
+                    cameraFrequency.setVisibility(View.GONE);
+                    ishow=false;
+                }
+                break;
+            case R.id.probabilty:
+                switchDrawlayout();
+                cmddialog("0x05:PROBABILITY:");
+                break;
+            case R.id.weight:
+                switchDrawlayout();
+                cmddialog("0x05:WEIGHT:");
+                break;
+            case R.id.cameraFrequency:
+                switchDrawlayout();
+                cmddialog("0x05:TimeFrequency:");
+                break;
             case R.id.tv_frequency:
                 //Frequency
-                if(lvFrequency.getVisibility()==View.VISIBLE){
+                if (lvFrequency.getVisibility() == View.VISIBLE) {
                     lvFrequency.setVisibility(View.GONE);
-                }else{
+                } else {
                     lvFrequency.setVisibility(View.VISIBLE);
                 }
                 break;
@@ -983,4 +1080,87 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 break;
         }
     }
+
+    private void getLog() {
+        socketClient.sendOrder("0x04");
+    }
+
+    private void openCamera() {
+        socketClient.sendOrder("0x01");
+    }
+
+    private void closeCamera() {
+        socketClient.sendOrder("0x03");
+    }
+
+    private void cmddialog(final String cmd) {
+        final AlertDialog.Builder builder = new AlertDialog.Builder(MapsActivity.this);
+        View view = LayoutInflater.from(MapsActivity.this).inflate(R.layout.layout_cmdcommand, null);
+        builder.setView(view);
+        final EditText etcommand = view.findViewById(R.id.cmdcommand);
+        TextView confirm = view.findViewById(R.id.cmd_confirm);
+        final AlertDialog alertDialog = builder.create();
+        alertDialog.show();
+        confirm.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String etstring = etcommand.getText().toString();
+                String scommand = cmd + etstring;
+                if (!TextUtils.isEmpty(scommand)) {
+                    if (cmd.contains("0x05:TimeFrequency:")){
+                        Integer integer = Integer.valueOf(etstring);
+                        int i = (1000 / integer);
+                        scommand = cmd +i;
+                    }
+                    socketClient.sendOrder(scommand);
+                    alertDialog.dismiss();
+                }
+            }
+        });
+    }
+
+    private void ipdialog() {
+        final AlertDialog.Builder builder = new AlertDialog.Builder(MapsActivity.this);
+        View view = LayoutInflater.from(MapsActivity.this).inflate(R.layout.layout_ipset, null);
+        builder.setView(view);
+        builder.setCancelable(false);
+        final EditText ethost = view.findViewById(R.id.host);
+        final EditText etport = view.findViewById(R.id.port);
+        ethost.setText(host);
+        etport.setText(port + "");
+        TextView cancle = view.findViewById(R.id.cancel);
+        TextView confirm = view.findViewById(R.id.confirm);
+        final AlertDialog alertDialog = builder.create();
+        alertDialog.show();
+        cancle.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                alertDialog.dismiss();
+            }
+        });
+        confirm.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String shost = ethost.getText().toString();
+                String sport = etport.getText().toString();
+                if (!TextUtils.isEmpty(shost) && !TextUtils.isEmpty(sport)) {
+                    host = shost;
+                    port = Integer.valueOf(sport);
+                    reConnect();
+                    alertDialog.dismiss();
+                } else {
+                    Toast.makeText(MapsActivity.this, "Please fill in the information", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+    }
+
+    private void reConnect() {
+        if (socketClient != null) {
+            socketClient.onDestroy();
+            conn();
+        }
+    }
+
 }

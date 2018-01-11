@@ -1,49 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    xmlns:tools="http://schemas.android.com/tools">
+    android:layout_height="match_parent">
+
     <fragment
         android:id="@+id/map"
         android:name="com.google.android.gms.maps.SupportMapFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        tools:context="com.fsy.google.MapsActivity"
-        >
-    </fragment>
+        tools:context="com.fsy.google.MapsActivity"></fragment>
+
     <ImageView
         android:id="@+id/iv_setting"
         android:layout_width="20dp"
         android:layout_height="20dp"
-        android:layout_marginTop="20dp"
         android:layout_marginLeft="15dp"
-        android:src="@drawable/setting"/>
+        android:layout_marginTop="20dp"
+        android:src="@drawable/setting" />
+
     <TextView
         android:id="@+id/tv_pop"
         android:layout_width="wrap_content"
         android:layout_height="40dp"
-        android:layout_marginTop="10dp"
         android:layout_marginLeft="10dp"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/button_fliter_down"
+        android:gravity="center"
         android:text="Frequency"
         android:textSize="12sp"
-        android:gravity="center"
-        android:background="@drawable/button_fliter_down"
-        android:visibility="gone"
-        >
-    </TextView>
-    
+        android:visibility="gone"></TextView>
+
     <CheckBox
         android:id="@+id/cb_traffic"
         android:layout_width="wrap_content"
         android:layout_height="40dp"
-        android:text="Traffic"
-        android:textSize="12sp"
-        android:textColor="@color/ori_textcolor"
-        android:onClick="onTrafficToggled"
         android:layout_gravity="center_horizontal|top"
         android:layout_marginRight="10dp"
         android:layout_marginTop="10dp"
-        android:background="@drawable/button_fliter_down"/>
+        android:background="@drawable/button_fliter_down"
+        android:onClick="onTrafficToggled"
+        android:text="Traffic"
+        android:textColor="@color/ori_textcolor"
+        android:textSize="12sp" />
 
     <LinearLayout
         android:layout_width="100dp"
@@ -57,93 +56,97 @@
             android:id="@+id/tv_record"
             android:layout_width="match_parent"
             android:layout_height="40dp"
-            android:text="Record"
+            android:background="@drawable/button_fliter_down"
             android:gravity="center"
-            android:background="@drawable/button_fliter_down"/>
+            android:text="Record" />
 
         <TextView
             android:id="@+id/tv_clear_map"
             android:layout_width="match_parent"
             android:layout_height="40dp"
-            android:text="ClearMap"
-            android:gravity="center"
+            android:layout_marginTop="10dp"
             android:background="@drawable/button_fliter_down"
-            android:layout_marginTop="10dp"/>
+            android:gravity="center"
+            android:text="ClearMap" />
 
     </LinearLayout>
 
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:gravity="left|bottom"
-        android:layout_marginLeft="10dp"
         android:layout_marginBottom="40dp"
+        android:layout_marginLeft="10dp"
         android:background="@android:color/transparent"
-        >
+        android:gravity="left|bottom"
+        android:orientation="vertical">
+
         <TextView
             android:id="@+id/tv_gps_lat"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
-            android:text="Latitude:0.0"
-            />
+            android:text="Latitude:0.0" />
+
         <TextView
             android:id="@+id/tv_gps_lng"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
-            android:text="Longitude:0.0"
-            />
+            android:text="Longitude:0.0" />
+
         <TextView
             android:id="@+id/tv_gps_alt"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
-            android:text="Altitude:0.0"
-            />
+            android:text="Altitude:0.0" />
+
         <TextView
             android:id="@+id/tv_gps_speed"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
-            android:text="Speed:0.0"
-            />
+            android:text="Speed:0.0" />
+
         <TextView
             android:id="@+id/tv_gps_bearing"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
-            android:text="Heading:0.0"
-            />
+            android:text="Heading:0.0" />
+
         <TextView
             android:id="@+id/tv_acc_x"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
-            android:text="AccelerationX:0.0"
-            />
+            android:text="AccelerationX:0.0" />
+
         <TextView
             android:id="@+id/tv_acc_y"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
-            android:text="AccelerationY:0.0"
-            />
+            android:text="AccelerationY:0.0" />
+
         <TextView
             android:id="@+id/tv_acc_z"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
-            android:text="AccelerationZ:0.0"
-            />
+            android:text="AccelerationZ:0.0" />
+
         <TextView
             android:id="@+id/tv_light_x"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="1"
-            android:text="LightX:0.0"
-            />
+            android:text="LightX:0.0" />
+
+        <TextView
+            android:id="@+id/socketstate"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content" />
 
     </LinearLayout>
 
